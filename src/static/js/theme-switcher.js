@@ -106,6 +106,18 @@
                 [data-theme="dark"] .dropdown-item {
                     color: #ffffff !important;
                 }
+                
+                /* Corrigir o hover para o modo claro */
+                [data-theme="light"] .dropdown-item:hover {
+                    background-color: #f0f0f0 !important;
+                    color: #212529 !important;
+                }
+                
+                /* Corrigir o hover para o modo escuro */
+                [data-theme="dark"] .dropdown-item:hover {
+                    background-color: #2c2c2c !important;
+                    color: #ffffff !important;
+                }
             `;
             document.head.appendChild(styleElement);
             

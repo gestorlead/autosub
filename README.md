@@ -1,104 +1,122 @@
-# Autosub Web
+# AutoSub - Gerador Automático de Legendas
 
-Uma aplicação web para geração automática de legendas em vídeos com tradução para português.
+O AutoSub é uma aplicação web para geração automática de legendas para vídeos. É possível fazer upload de arquivos de vídeo ou fornecer URLs de vídeos online, e o sistema gera legendas em inglês e português.
 
-## 🚀 Funcionalidades
+## Funcionalidades
 
-- Upload de vídeos (suporta formatos MP4, MOV, AVI, MKV)
+- Upload de arquivos de vídeo
+- Processamento de vídeos a partir de URLs
 - Geração automática de legendas em inglês
-- Tradução automática das legendas para português
-- Download do arquivo de legendas (.srt)
-- Interface web simples e intuitiva
-- Autenticação básica para segurança
+- Tradução automática para português
+- Gerenciamento de vídeos e legendas
+- Autenticação e gerenciamento de usuários
+- Visualização e edição de legendas
+- Correção de legendas com base em transcrições manuais
+- Geração de textos para redes sociais com base nas legendas
+- Painel administrativo para gerenciamento de usuários
 
-## 📋 Pré-requisitos
+## Requisitos
 
-- Docker
-- Docker Swarm (para deploy em produção)
-- Chave de API do Google Translate
+- Docker e Docker Compose
+- ou Python 3.8+ (para execução local)
 
-## 🔧 Configuração
+## Iniciando com Docker
 
 1. Clone o repositório:
+   ```
+   git clone https://github.com/seu-usuario/autosub.git
+   cd autosub
+   ```
 
-```bash
-git clone https://github.com/gestorlead/autosub.git
-cd autosub
+2. Execute o script de inicialização:
+   ```
+   ./start.sh
+   ```
+
+3. Acesse a aplicação em http://localhost:5000
+
+4. Faça login com as credenciais padrão:
+   - Usuário: admin
+   - Senha: admin123
+
+## Iniciando Localmente (sem Docker)
+
+Se preferir executar localmente sem Docker:
+
+1. Clone o repositório:
+   ```
+   git clone https://github.com/seu-usuario/autosub.git
+   cd autosub
+   ```
+
+2. Execute o script de inicialização local:
+   ```
+   ./start-local.sh
+   ```
+
+3. Acesse a aplicação em http://localhost:5000
+
+## Scripts Utilitários
+
+- `start.sh`: Inicia o sistema usando Docker
+- `start-local.sh`: Inicia o sistema localmente sem Docker
+- `check-db.sh`: Verifica o estado do banco de dados
+
+## Verificando o Banco de Dados
+
+Para verificar o estado do banco de dados, use:
+
+```
+./check-db.sh
 ```
 
-2. Configure as variáveis de ambiente no arquivo `.env`:
+Este comando mostrará as tabelas existentes e os dados armazenados no banco de dados.
 
-```env
-FLASK_SECRET_KEY=sua_chave_secreta
-BASIC_AUTH_USERNAME=seu_usuario
-BASIC_AUTH_PASSWORD=sua_senha
-GOOGLE_TRANSLATE_API_KEY=sua_chave_google_translate
-```
+## Usando a Aplicação
 
-3. Configure o arquivo `auto-sub.yaml` conforme necessário para seu ambiente.
+1. Faça login com suas credenciais
+2. Acesse a página de Upload
+3. Faça upload de um vídeo ou forneça uma URL
+4. Opcionalmente, forneça uma transcrição manual para melhorar a precisão das legendas
+5. Aguarde o processamento (pode demorar, dependendo do tamanho do vídeo)
+6. Acesse a página de detalhes do vídeo para visualizar, editar ou baixar as legendas
 
-## 🚀 Deploy
+## Administração de Usuários
 
-### Desenvolvimento Local
+Usuários com privilégios de administrador podem:
 
-1. Construa a imagem Docker:
+1. Criar novos usuários
+2. Editar informações de usuários existentes
+3. Ativar ou desativar contas de usuários
+4. Conceder privilégios de administrador a outros usuários
 
-```bash
-docker build -t autosub-web .
-```
+O acesso ao painel de administração está disponível no menu de conta para usuários administradores.
 
-2. Execute o container:
+## Estrutura do Projeto
 
-```bash
-docker run -p 5000:5000 --env-file .env autosub-web
-```
+- `app.py`: Ponto de entrada da aplicação
+- `src/`: Código-fonte da aplicação
+  - `controllers/`: Controladores da aplicação
+  - `models/`: Modelos de dados
+  - `templates/`: Templates HTML
+  - `static/`: Arquivos estáticos (CSS, JS, imagens)
+  - `utils/`: Utilitários
+  - `migrations/`: Scripts de migração do banco de dados
+- `uploads/`: Diretório para armazenar os vídeos enviados
+- `docker-compose.yml`: Configuração do Docker Compose
+- `Dockerfile`: Configuração do Docker
 
-### Produção (Docker Swarm)
-
-1. Inicialize o Docker Swarm (se ainda não estiver inicializado):
-
-```bash
-docker swarm init
-```
-
-2. Deploy do stack:
-
-```bash
-docker stack deploy -c auto-sub.yaml autosub
-```
-
-## 🌐 Uso
-
-1. Acesse a aplicação através do navegador
-2. Faça login com as credenciais configuradas
-3. Selecione um arquivo de vídeo para upload
-4. Aguarde o processamento
-5. Faça o download do arquivo de legendas gerado
-
-## 🛠️ Tecnologias Utilizadas
+## Tecnologias Utilizadas
 
 - Python
 - Flask
-- Autosub
-- Google Cloud Translation API
+- PostgreSQL
 - Docker
-- Traefik (para proxy reverso e SSL)
+- autosub (biblioteca de reconhecimento de fala)
+- FFmpeg
+- YouTube-DL
+- Bootstrap
 
-## ⚠️ Notas Importantes
+## Licença
 
-- Certifique-se de manter suas chaves de API e credenciais seguras
-- O armazenamento de arquivos é temporário em `/tmp/uploads`
-- Recomenda-se implementar um sistema de limpeza periódica para os arquivos temporários
-- Em produção, configure corretamente o SSL através do Traefik
-
-## 📄 Licença
-
-Este projeto está sob a licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
-
-## ✨ Contribuição
-
-1. Faça um Fork do projeto
-2. Crie sua Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a Branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
+MIT

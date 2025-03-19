@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block title %}Meus Vídeos - AutoSub{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Meus Vídeos</h1>
+    <a href="{{ url_for('upload') }}" class="btn btn-primary">
+        <i class="fas fa-upload me-2"></i>Novo Vídeo
+    </a>
+</div>
+
+{% if videos %}
+    <div class="row g-4">
+        {% for video in videos %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-header d-flex justify-content-between align-items-center 
+                                {% if video.status == 'completed' %}bg-success text-white
+                                {% elif video.status == 'processing' %}bg-warning
+                                {% elif video.status == 'error' %}bg-danger text-white
+                                {% else %}bg-secondary text-white{% endif %}">
+                        <span>
+                            {% if video.status == 'completed' %}
+                                <i class="fas fa-check-circle me-1"></i>Concluído
+                            {% elif video.status == 'processing' %}
+                                <i class="fas fa-spinner fa-spin me-1"></i>Processando
+                            {% elif video.status == 'error' %}
+                                <i class="fas fa-exclamation-circle me-1"></i>Erro
+                            {% else %}
+                                <i class="fas fa-clock me-1"></i>Pendente
+                            {% endif %}
+                        </span>
+                        <small>{{ video.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">{{ video.title }}</h5>
+                        <p class="card-text text-muted">
+                            {% if video.is_file %}
+                                <i class="fas fa-file-video me-1"></i>
+                                {{ video.original_filename }}
+                            {% else %}
+                                <i class="fas fa-link me-1"></i>
+                                URL de vídeo
+                            {% endif %}
+                        </p>
+                        {% if video.description %}
+                            <p class="card-text small">{{ video.description }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer bg-white">
+                        <div class="d-flex">
+                            <a href="{{ url_for('video_detail', video_id=video.id) }}" class="btn btn-sm btn-outline-primary flex-grow-1 me-1">
+                                <i class="fas fa-info-circle me-1"></i>Ver Detalhes
+                            </a>
+                            <form action="{{ url_for('delete_video', video_id=video.id) }}" method="POST" class="flex-shrink-0" onsubmit="return confirm('Tem certeza que deseja excluir este vídeo?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="card shadow-sm">
+        <div class="card-body text-center py-5">
+            <img src="{{ url_for('static', filename='img/empty-state.svg') }}" 
+                 alt="Nenhum vídeo" class="img-fluid mb-3" style="max-height: 200px;">
+            <h3>Você ainda não tem vídeos</h3>
+            <p class="text-muted">Envie seu primeiro vídeo para gerar legendas automáticas.</p>
+            <a href="{{ url_for('upload') }}" class="btn btn-primary">
+                <i class="fas fa-upload me-2"></i>Enviar Vídeo
+            </a>
+        </div>
+    </div>
+{% endif %}
+
+{% endblock %} 

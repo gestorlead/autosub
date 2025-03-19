@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block title %}Upload de Vídeo - AutoSub{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Upload de Vídeo</h1>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <ul class="nav nav-tabs" id="uploadTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="file-tab" data-bs-toggle="tab" data-bs-target="#file-upload" 
+                        type="button" role="tab" aria-controls="file-upload" aria-selected="true">
+                    <i class="fas fa-file-upload me-2"></i>Arquivo
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="url-tab" data-bs-toggle="tab" data-bs-target="#url-upload" 
+                        type="button" role="tab" aria-controls="url-upload" aria-selected="false">
+                    <i class="fas fa-link me-2"></i>URL
+                </button>
+            </li>
+        </ul>
+        
+        <div class="tab-content p-4" id="uploadTabsContent">
+            <!-- Upload de Arquivo -->
+            <div class="tab-pane fade show active" id="file-upload" role="tabpanel" aria-labelledby="file-tab">
+                <form method="post" enctype="multipart/form-data" action="{{ url_for('upload') }}">
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Título (opcional)</label>
+                        <input type="text" class="form-control" id="title" name="title">
+                        <div class="form-text">Se não informado, o nome do arquivo será usado como título.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Transcrição manual (opcional)</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                        <div class="form-text">Forneça a transcrição exata do vídeo para melhorar a precisão das legendas geradas automaticamente.</div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="file" class="form-label">Arquivo de Vídeo</label>
+                        <div class="input-group">
+                            <input type="file" class="form-control" id="file" name="file" accept="video/*" required>
+                        </div>
+                        <div class="form-text">
+                            Formatos permitidos: MP4, MOV, AVI, MKV. Tamanho máximo: 200MB.
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-upload me-2"></i>Enviar Arquivo
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Upload por URL -->
+            <div class="tab-pane fade" id="url-upload" role="tabpanel" aria-labelledby="url-tab">
+                <form method="post" action="{{ url_for('upload') }}">
+                    <div class="mb-3">
+                        <label for="url-title" class="form-label">Título (opcional)</label>
+                        <input type="text" class="form-control" id="url-title" name="title">
+                        <div class="form-text">Se não informado, "Vídeo de URL" será usado como título.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="url-description" class="form-label">Transcrição manual (opcional)</label>
+                        <textarea class="form-control" id="url-description" name="description" rows="3"></textarea>
+                        <div class="form-text">Forneça a transcrição exata do vídeo para melhorar a precisão das legendas geradas automaticamente.</div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="video_url" class="form-label">URL do Vídeo</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-link"></i></span>
+                            <input type="url" class="form-control" id="video_url" name="video_url" 
+                                   placeholder="https://www.youtube.com/watch?v=..." required>
+                        </div>
+                        <div class="form-text">
+                            Suporta links do YouTube, Vimeo e outros sites de compartilhamento de vídeos.
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-cloud-download-alt me-2"></i>Processar URL
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card bg-light">
+    <div class="card-body">
+        <h5 class="card-title"><i class="fas fa-info-circle me-2"></i>Informações Importantes</h5>
+        <ul class="mb-0">
+            <li>Após o envio, o vídeo será processado automaticamente.</li>
+            <li>O tempo de processamento depende do tamanho e duração do vídeo.</li>
+            <li>Você receberá legendas em inglês e português.</li>
+            <li>O processamento ocorre em segundo plano; você pode verificar o status na página "Meus Vídeos".</li>
+        </ul>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block title %}AutoSub - Geração Automática de Legendas{% endblock %}
+
+{% block content %}
+<div class="row align-items-center py-5">
+    <div class="col-md-6">
+        <h1 class="display-4 fw-bold mb-4">Legendas Automáticas para seus Vídeos</h1>
+        <p class="lead mb-4">
+            Gere legendas em português automaticamente para qualquer vídeo. 
+            Upload rápido, processamento eficiente e resultados profissionais.
+        </p>
+        <div class="d-grid gap-2 d-md-flex justify-content-md-start mb-4">
+            {% if session.get('user_token') %}
+                <a href="{{ url_for('upload') }}" class="btn btn-primary btn-lg px-4 me-md-2">
+                    <i class="fas fa-upload me-2"></i>Enviar Vídeo
+                </a>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-lg px-4">
+                    <i class="fas fa-film me-2"></i>Meus Vídeos
+                </a>
+            {% else %}
+                <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg px-4 me-md-2">
+                    <i class="fas fa-sign-in-alt me-2"></i>Entrar
+                </a>
+            {% endif %}
+        </div>
+    </div>
+    <div class="col-md-6">
+        <img src="{{ url_for('static', filename='img/hero-image.svg') }}" 
+             alt="Ilustração de legendas" class="img-fluid">
+    </div>
+</div>
+
+<hr class="my-5">
+
+<div class="row g-4 py-4">
+    <h2 class="text-center mb-4">Como Funciona</h2>
+    
+    <div class="col-md-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body text-center p-4">
+                <div class="feature-icon bg-primary bg-gradient text-white rounded-circle mb-3">
+                    <i class="fas fa-upload fa-2x p-3"></i>
+                </div>
+                <h3 class="fs-4">1. Envie seu Vídeo</h3>
+                <p>Faça upload de um arquivo de vídeo ou forneça um link para um vídeo online.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body text-center p-4">
+                <div class="feature-icon bg-primary bg-gradient text-white rounded-circle mb-3">
+                    <i class="fas fa-cogs fa-2x p-3"></i>
+                </div>
+                <h3 class="fs-4">2. Processamento</h3>
+                <p>Nosso sistema extrai o áudio, reconhece o texto e traduz para português.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body text-center p-4">
+                <div class="feature-icon bg-primary bg-gradient text-white rounded-circle mb-3">
+                    <i class="fas fa-download fa-2x p-3"></i>
+                </div>
+                <h3 class="fs-4">3. Download</h3>
+                <p>Baixe o arquivo de legenda em formato SRT pronto para usar em qualquer player.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<hr class="my-5">
+
+<div class="row py-4">
+    <div class="col-lg-8 offset-lg-2 text-center">
+        <h2 class="mb-4">Pronto para começar?</h2>
+        <p class="lead mb-4">
+            Crie uma conta gratuita hoje mesmo e comece a gerar legendas automáticas para seus vídeos.
+        </p>
+        {% if not session.get('user_token') %}
+            <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg px-4">
+                <i class="fas fa-sign-in-alt me-2"></i>Entrar
+            </a>
+        {% else %}
+            <a href="{{ url_for('upload') }}" class="btn btn-primary btn-lg px-4">
+                <i class="fas fa-upload me-2"></i>Enviar Vídeo
+            </a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %} 

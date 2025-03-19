@@ -135,4 +135,62 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+    
+    // Botões para copiar texto para a área de transferência
+    const copyButtons = document.querySelectorAll('.copy-btn');
+    copyButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const platform = this.getAttribute('data-content');
+            const textElement = document.getElementById(`${platform}-text`);
+            
+            if (textElement) {
+                navigator.clipboard.writeText(textElement.textContent.trim())
+                    .then(() => {
+                        // Feedback visual de sucesso
+                        const originalText = this.innerHTML;
+                        this.innerHTML = '<i class="fas fa-check me-1"></i>Copiado!';
+                        this.classList.remove('btn-outline-primary');
+                        this.classList.add('btn-success');
+                        
+                        setTimeout(() => {
+                            this.innerHTML = originalText;
+                            this.classList.remove('btn-success');
+                            this.classList.add('btn-outline-primary');
+                        }, 2000);
+                    })
+                    .catch(err => {
+                        console.error('Erro ao copiar texto: ', err);
+                        alert('Não foi possível copiar o texto. Por favor, tente novamente.');
+                    });
+            }
+        });
+    });
+    
+    // Botões para gerar conteúdo de redes sociais
+    const generateButtons = document.querySelectorAll('.generate-social');
+    generateButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const platform = this.getAttribute('data-platform');
+            const videoId = window.location.pathname.split('/').pop();
+            
+            // Desabilita o botão e mostra indicador de carregamento
+            this.disabled = true;
+            const originalText = this.innerHTML;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Gerando...';
+            
+            // Faz a solicitação AJAX
+            fetch(`/video/${videoId}/generate-social?platform=${platform}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Recarrega a página para mostrar o conteúdo gerado
+                    window.location.reload();
+                })
+                .catch(error => {
+                    console.error('Erro ao gerar conteúdo:', error);
+                    this.disabled = false;
+                    this.innerHTML = originalText;
+                    alert('Ocorreu um erro ao gerar o conteúdo. Por favor, tente novamente.');
+                });
+        });
+    });
 }); 

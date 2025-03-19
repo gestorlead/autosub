@@ -2,18 +2,46 @@
 
 /* Cores personalizadas */
 :root {
-    --primary-color: #3498db;
-    --secondary-color: #2c3e50;
-    --accent-color: #e74c3c;
-    --light-color: #ecf0f1;
-    --dark-color: #34495e;
-    --success-color: #27ae60;
-    --warning-color: #f39c12;
-    --danger-color: #c0392b;
+    /* Variáveis de cores para o tema claro (padrão) */
+    --primary-color: #0d6efd;
+    --secondary-color: #6c757d;
+    --accent-color: #ffc107;
+    --light-color: #f8f9fa;
+    --dark-color: #212529;
+    --success-color: #28a745;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    
+    /* Variáveis de cores para o tema */
+    --bg-primary: var(--light-color);
+    --bg-secondary: #ffffff;
+    --bg-cards: #ffffff;
+    --bg-input: #ffffff;
+    --text-primary: var(--dark-color);
+    --text-secondary: #495057;
+    --text-muted: #6c757d;
+    --border-color: #dee2e6;
+    --shadow-color: rgba(0, 0, 0, 0.15);
 }
 
-/* Ajustes no layout */
+/* Tema escuro */
+[data-theme="dark"] {
+    --bg-primary: #121212;
+    --bg-secondary: #1e1e1e;
+    --bg-cards: #2a2a2a;
+    --bg-input: #333333;
+    --text-primary: #f8f9fa;
+    --text-secondary: #e9ecef;
+    --text-muted: #adb5bd;
+    --border-color: #444444;
+    --shadow-color: rgba(0, 0, 0, 0.5);
+}
+
+/* Aplicando variáveis ao corpo e elementos */
 body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -81,6 +109,9 @@ footer {
 /* Melhorias nos cards */
 .card {
     transition: transform 0.2s, box-shadow 0.2s;
+    background-color: var(--bg-cards);
+    border-color: var(--border-color);
+    box-shadow: 0 0.125rem 0.25rem var(--shadow-color);
 }
 
 .card:hover {
@@ -136,4 +167,61 @@ footer {
 
 .alert-warning {
     border-left-color: var(--warning-color);
+}
+
+.card-header {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+}
+
+.navbar-dark {
+    background-color: var(--primary-color) !important;
+}
+
+.table {
+    color: var(--text-primary);
+}
+
+.modal-content {
+    background-color: var(--bg-cards);
+    color: var(--text-primary);
+}
+
+.form-control, .input-group-text {
+    background-color: var(--bg-input);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+.list-group-item {
+    background-color: var(--bg-cards);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+.dropdown-menu {
+    background-color: var(--bg-cards);
+    border-color: var(--border-color);
+}
+
+.dropdown-item {
+    color: var(--text-primary);
+}
+
+.dropdown-item:hover {
+    background-color: var(--bg-secondary);
+}
+
+.alert-info {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+.badge.bg-secondary {
+    background-color: var(--secondary-color) !important;
+}
+
+.bg-light {
+    background-color: var(--bg-secondary) !important;
 } 

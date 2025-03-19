@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
     <title>{% block title %}AutoSub - Geração Automática de Legendas{% endblock %}</title>
     
     {{ bootstrap.load_css() }}
@@ -79,6 +80,7 @@
 
     {{ bootstrap.load_js() }}
     <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/theme-switcher.js') }}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html> 

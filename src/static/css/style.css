@@ -395,6 +395,18 @@ footer {
     color: white !important;
 }
 
+/* Correção para hover nos itens de download */
+[data-theme="dark"] .list-group-item-action:hover {
+    background-color: #3a3a3a !important;
+    color: white !important;
+}
+
+/* Garantir que o texto muted continue visível mesmo no hover */
+[data-theme="dark"] .list-group-item-action:hover .text-muted {
+    color: #ffffff !important;
+    opacity: 0.8;
+}
+
 /* Correção para a label "Arquivo .srt" que utiliza a classe text-muted */
 [data-theme="dark"] .list-group-item-action .text-muted {
     color: #ffffff !important;

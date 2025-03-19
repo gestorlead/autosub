@@ -395,6 +395,12 @@ footer {
     color: white !important;
 }
 
+/* Correção para a label "Arquivo .srt" que utiliza a classe text-muted */
+[data-theme="dark"] .list-group-item-action .text-muted {
+    color: #ffffff !important;
+    opacity: 0.8;
+}
+
 [data-theme="dark"] .btn-outline-primary,
 [data-theme="dark"] .btn-outline-secondary,
 [data-theme="dark"] .btn-outline-success {

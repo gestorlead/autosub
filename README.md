@@ -2,6 +2,9 @@
 
 O AutoSub é uma aplicação web para geração automática de legendas para vídeos. É possível fazer upload de arquivos de vídeo ou fornecer URLs de vídeos online, e o sistema gera legendas em inglês e português.
 
+![Versão](https://img.shields.io/badge/versão-1.0.0-blue)
+![Licença](https://img.shields.io/badge/licença-MIT-green)
+
 ## Funcionalidades
 
 - Upload de arquivos de vídeo
@@ -20,11 +23,23 @@ O AutoSub é uma aplicação web para geração automática de legendas para ví
 - Docker e Docker Compose
 - ou Python 3.8+ (para execução local)
 
-## Iniciando com Docker
+## Instalação com Docker
+
+### Usando imagem pré-construída
+
+```bash
+# Baixar a imagem do Docker Hub
+docker pull gestorlead/autosub:1.0.0
+
+# Executar com Docker Compose
+docker-compose up -d
+```
+
+### A partir do código-fonte
 
 1. Clone o repositório:
    ```
-   git clone https://github.com/seu-usuario/autosub.git
+   git clone https://github.com/gestorlead/autosub.git
    cd autosub
    ```
 
@@ -35,17 +50,13 @@ O AutoSub é uma aplicação web para geração automática de legendas para ví
 
 3. Acesse a aplicação em http://localhost:5000
 
-4. Faça login com as credenciais padrão:
-   - Usuário: admin
-   - Senha: admin123
-
 ## Iniciando Localmente (sem Docker)
 
 Se preferir executar localmente sem Docker:
 
 1. Clone o repositório:
    ```
-   git clone https://github.com/seu-usuario/autosub.git
+   git clone https://github.com/gestorlead/autosub.git
    cd autosub
    ```
 
@@ -105,6 +116,28 @@ O acesso ao painel de administração está disponível no menu de conta para us
 - `uploads/`: Diretório para armazenar os vídeos enviados
 - `docker-compose.yml`: Configuração do Docker Compose
 - `Dockerfile`: Configuração do Docker
+- `VERSION`: Arquivo com a versão atual do projeto
+- `CHANGELOG.md`: Histórico de alterações do projeto
+
+## Versionamento
+
+Este projeto segue o [Versionamento Semântico 2.0.0](https://semver.org/lang/pt-BR/):
+
+- MAJOR: alterações incompatíveis com versões anteriores
+- MINOR: adição de funcionalidades mantendo compatibilidade
+- PATCH: correções de bugs mantendo compatibilidade
+
+Para ver o histórico de alterações, consulte o [CHANGELOG.md](CHANGELOG.md).
+
+## Contribuindo
+
+Contribuições são bem-vindas! Para contribuir:
+
+1. Faça um fork do projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/nova-funcionalidade`)
+3. Faça commit das alterações (`git commit -m 'Adiciona nova funcionalidade'`)
+4. Envie para o GitHub (`git push origin feature/nova-funcionalidade`)
+5. Abra um Pull Request
 
 ## Tecnologias Utilizadas
 

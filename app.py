@@ -13,6 +13,9 @@ from src.utils import login_required, get_current_user, create_session, logout_u
 from src.utils.database import check_db_connection
 from src.utils.openai_helper import generate_social_media_post, correct_subtitles
 
+# Versão do aplicativo
+APP_VERSION = "1.0.0"
+
 # Carrega as variáveis definidas no .env
 load_dotenv()
 
@@ -362,7 +365,7 @@ def health_check():
         "status": "ok",
         "timestamp": datetime.now().isoformat(),
         "database": check_db_connection(),
-        "version": "1.0.0"
+        "version": APP_VERSION
     }
     
     if not health_status["database"]:

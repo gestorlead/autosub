@@ -96,6 +96,16 @@
                 html[data-theme="auto"] .theme-icon-auto {
                     display: inline-block;
                 }
+                
+                /* Garantir que o texto do dropdown seja sempre visível */
+                .dropdown-item {
+                    color: var(--bs-body-color) !important;
+                    white-space: nowrap;
+                }
+                
+                [data-theme="dark"] .dropdown-item {
+                    color: #ffffff !important;
+                }
             `;
             document.head.appendChild(styleElement);
             

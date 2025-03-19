@@ -9,17 +9,35 @@ dotenv.load_dotenv('.env', override=True)
 if os.path.exists('.env.dev'):
     dotenv.load_dotenv('.env.dev', override=True)
 
-# Obter a chave da API da variável de ambiente
+# Obter as chaves da API da variável de ambiente
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
 
-# Verificar se a chave está definida e exibir feedback
-if OPENAI_API_KEY:
-    # Exibir apenas os primeiros caracteres da chave para depuração
-    print(f"DEBUG: Chave da API OpenAI configurada: {OPENAI_API_KEY[:8]}...", file=sys.stderr)
+# URLs das APIs
+OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
+GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
+
+# Usar Groq por padrão se a chave estiver disponível
+USE_GROQ = GROQ_API_KEY is not None and GROQ_API_KEY != ""
+
+# Verificar qual API estamos usando
+if USE_GROQ:
+    print(f"DEBUG: Usando API do Groq", file=sys.stderr)
+    API_KEY = GROQ_API_KEY
+    API_URL = GROQ_API_URL
+    MODEL = "llama3-70b-8192"  # Modelo compatível com Groq
 else:
-    print("AVISO: Chave da API OpenAI não configurada. A geração de texto não funcionará.", file=sys.stderr)
-
-API_URL = "https://api.openai.com/v1/chat/completions"
+    # Verificar se a chave OpenAI está definida e exibir feedback
+    if OPENAI_API_KEY:
+        print(f"DEBUG: Usando API da OpenAI", file=sys.stderr)
+        API_KEY = OPENAI_API_KEY
+        API_URL = OPENAI_API_URL
+        MODEL = "gpt-4o-mini"
+    else:
+        print("AVISO: Nenhuma chave de API configurada. A geração de texto não funcionará.", file=sys.stderr)
+        API_KEY = ""
+        API_URL = OPENAI_API_URL
+        MODEL = "gpt-4o-mini"
 
 def generate_social_media_post(transcript, platform="instagram"):
     """
@@ -32,8 +50,8 @@ def generate_social_media_post(transcript, platform="instagram"):
     Returns:
         str: Texto formatado para publicação.
     """
-    if not OPENAI_API_KEY:
-        return "Erro: Chave da API OpenAI não configurada. Configure a variável de ambiente OPENAI_API_KEY."
+    if not API_KEY:
+        return "Erro: Chave da API não configurada."
     
     # Cria o prompt com base na plataforma selecionada
     if platform.lower() == "tiktok":
@@ -66,14 +84,14 @@ def generate_social_media_post(transcript, platform="instagram"):
         - Ter um tom profissional, mas amigável e encorajador para estudantes de inglês
         """
     
-    # Configuração da requisição para a API da OpenAI
+    # Configuração da requisição para a API
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {OPENAI_API_KEY}"
+        "Authorization": f"Bearer {API_KEY}"
     }
     
     data = {
-        "model": "gpt-4o-mini",  # Usando o modelo gpt-4o-mini conforme solicitado
+        "model": MODEL,
         "messages": [
             {"role": "system", "content": "Você é um professor de inglês especialista em marketing digital que cria conteúdo educativo para redes sociais focado no ensino de inglês."},
             {"role": "user", "content": prompt}
@@ -83,7 +101,7 @@ def generate_social_media_post(transcript, platform="instagram"):
     }
     
     try:
-        print(f"DEBUG: Enviando requisição para OpenAI API...", file=sys.stderr)
+        print(f"DEBUG: Enviando requisição para API... ({API_URL})", file=sys.stderr)
         response = requests.post(API_URL, headers=headers, data=json.dumps(data), timeout=30)
         print(f"DEBUG: Resposta recebida! Status: {response.status_code}", file=sys.stderr)
         
@@ -95,18 +113,18 @@ def generate_social_media_post(transcript, platform="instagram"):
         result = response.json()
         return result["choices"][0]["message"]["content"].strip()
     except requests.exceptions.Timeout:
-        print("DEBUG: Timeout na requisição à API OpenAI", file=sys.stderr)
-        return "Erro: Tempo esgotado ao tentar conectar com a API OpenAI. Tente novamente mais tarde."
+        print("DEBUG: Timeout na requisição à API", file=sys.stderr)
+        return "Erro: Tempo esgotado ao tentar conectar com a API. Tente novamente mais tarde."
     except requests.exceptions.ConnectionError:
-        print("DEBUG: Erro de conexão com a API OpenAI", file=sys.stderr)
-        return "Erro: Não foi possível conectar-se à API OpenAI. Verifique sua conexão de internet."
+        print("DEBUG: Erro de conexão com a API", file=sys.stderr)
+        return "Erro: Não foi possível conectar-se à API. Verifique sua conexão de internet."
     except Exception as e:
         print(f"DEBUG: Erro na chamada à API: {str(e)}", file=sys.stderr)
-        return f"Erro ao gerar texto com a API OpenAI: {str(e)}"
+        return f"Erro ao gerar texto: {str(e)}"
 
 def correct_subtitles(autosub_transcript, manual_transcript):
     """
-    Envia para a OpenAI a transcrição do autosub e a transcrição manual para corrigir inconsistências.
+    Envia para a API a transcrição do autosub e a transcrição manual para corrigir inconsistências.
     
     Args:
         autosub_transcript (str): Transcrição gerada pelo autosub.
@@ -115,8 +133,8 @@ def correct_subtitles(autosub_transcript, manual_transcript):
     Returns:
         str: Transcrição corrigida no formato SRT.
     """
-    if not OPENAI_API_KEY:
-        return "Erro: Chave da API OpenAI não configurada. Configure a variável de ambiente OPENAI_API_KEY."
+    if not API_KEY:
+        return "Erro: Chave da API não configurada."
     
     prompt = f"""
     Compare a transcrição gerada automaticamente com a transcrição manual fornecida e corrija o arquivo SRT mantendo seu formato.
@@ -138,14 +156,14 @@ def correct_subtitles(autosub_transcript, manual_transcript):
     Lembre-se que estamos trabalhando com conteúdo educativo para ensino de inglês, então a precisão das falas e expressões é essencial.
     """
     
-    # Configuração da requisição para a API da OpenAI
+    # Configuração da requisição para a API
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {OPENAI_API_KEY}"
+        "Authorization": f"Bearer {API_KEY}"
     }
     
     data = {
-        "model": "gpt-4o-mini",  # Usando o modelo gpt-4o-mini conforme solicitado
+        "model": MODEL,
         "messages": [
             {"role": "system", "content": "Você é um especialista em legendagem de vídeos educativos para ensino de inglês, com ampla experiência em transcrição de diálogos com múltiplos personagens."},
             {"role": "user", "content": prompt}
@@ -155,7 +173,7 @@ def correct_subtitles(autosub_transcript, manual_transcript):
     }
     
     try:
-        print(f"DEBUG: Enviando requisição para corrigir legendas...", file=sys.stderr)
+        print(f"DEBUG: Enviando requisição para corrigir legendas... ({API_URL})", file=sys.stderr)
         response = requests.post(API_URL, headers=headers, data=json.dumps(data), timeout=45)
         print(f"DEBUG: Resposta recebida para correção! Status: {response.status_code}", file=sys.stderr)
         
@@ -167,11 +185,11 @@ def correct_subtitles(autosub_transcript, manual_transcript):
         result = response.json()
         return result["choices"][0]["message"]["content"].strip()
     except requests.exceptions.Timeout:
-        print("DEBUG: Timeout na requisição à API OpenAI para correção", file=sys.stderr)
-        return "Erro: Tempo esgotado ao tentar conectar com a API OpenAI. Tente novamente mais tarde."
+        print("DEBUG: Timeout na requisição à API para correção", file=sys.stderr)
+        return "Erro: Tempo esgotado ao tentar conectar com a API. Tente novamente mais tarde."
     except requests.exceptions.ConnectionError:
-        print("DEBUG: Erro de conexão com a API OpenAI para correção", file=sys.stderr)
-        return "Erro: Não foi possível conectar-se à API OpenAI. Verifique sua conexão de internet."
+        print("DEBUG: Erro de conexão com a API para correção", file=sys.stderr)
+        return "Erro: Não foi possível conectar-se à API. Verifique sua conexão de internet."
     except Exception as e:
         print(f"DEBUG: Erro na chamada à API para correção: {str(e)}", file=sys.stderr)
-        return f"Erro ao corrigir legendas com a API OpenAI: {str(e)}" 
+        return f"Erro ao corrigir legendas: {str(e)}" 

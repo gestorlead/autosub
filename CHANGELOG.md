@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.1.0] - 2025-05-15
+
+### Adicionado
+- Suporte a tema claro/escuro com detecção automática da preferência do sistema
+- Toggle para alternar entre temas no menu de navegação
+- Ícones intuitivos para cada modo de tema
+- Persistência da preferência de tema do usuário usando localStorage
+
+### Melhorado
+- Melhor contraste de texto no tema escuro para melhor legibilidade
+- Interface mais responsiva para dispositivos móveis
+- Botões de ação com ícones mais descritivos
+- Feedback visual aprimorado para ações do usuário
+
+### Corrigido
+- Contraste insuficiente no tema escuro em elementos de card e tabela
+- Problemas de alinhamento em alguns elementos da interface
+- Comportamento inconsistente em dispositivos móveis
+
 ## [1.0.0] - 2025-03-19
 
 ### Adicionado

@@ -27,8 +27,10 @@
   <rect class="progress" x="80" y="270" width="120" height="8" rx="4" />
   
   <!-- Botão de play -->
-  <circle class="play-button pulse" cx="120" cy="160" r="25" />
-  <polygon class="play-icon" points="112,145 112,175 135,160" />
+  <g class="pulse">
+    <circle class="play-button" cx="120" cy="160" r="25" />
+    <polygon class="play-icon" points="112,145 112,175 135,160" />
+  </g>
   
   <!-- Ícone de Legendas -->
   <g transform="translate(330, 270)">

@@ -6,6 +6,10 @@
     <meta name="color-scheme" content="light dark">
     <title>{% block title %}AutoSub - Geração Automática de Legendas{% endblock %}</title>
     
+    <!-- Favicon -->
+    <link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}">
+    
     {{ bootstrap.load_css() }}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -76,10 +80,10 @@
         <div class="container">
             <div class="row">
                 <div class="col-md-6">
-                    <span class="text-muted">Autosub © 2025</span>
+                    <span>Autosub © 2025</span>
                 </div>
                 <div class="col-md-6 text-end">
-                    <span class="text-muted">@version {{ config.APP_VERSION }}</span>
+                    <span>@version {{ config.APP_VERSION }}</span>
                 </div>
             </div>
         </div>

@@ -1,0 +1,53 @@
+version: "3.7"
+
+# Definição dos Serviços
+services:
+  autosub:
+    # Define a imagem do docker
+    image: qqenglishbr/autosub-web:latest
+
+    # Definição das redes usadas
+    networks:
+      - network_public
+
+    environment:
+      - FLASK_SECRET_KEY=sua_chave_secreta_aqui
+      - BASIC_AUTH_USERNAME=usuario_exemplo
+      - BASIC_AUTH_PASSWORD=senha_exemplo
+      - GOOGLE_TRANSLATE_API_KEY=sua_api_key_aqui
+
+    deploy:
+      # modo de deploy do serviço
+      mode: replicated # (replicated ou global)
+      # Define as replicas (somente no modo replicated)
+      replicas: 1 # quantidade de replicas
+      # local de deploy do serviço
+      placement:
+        # regras de posicionamento do serviço
+        constraints:
+          # usa o tipo do node (manager ou worker)
+          - node.hostname == worker1 # hosts que não são manager
+      # Limita recursos do serviço
+      resources:
+        #  Define os limites do serviço
+        limits:
+          # quantodade de CPU (1 para 1 cpu inteira)
+          cpus: "1"
+          # Quantidade Máxima de Memória Permitida (em MB)
+          memory: 1024M
+      # Labels para Roteamento pelo Traefik
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.autosub.rule=Host(`seu_dominio_aqui`)
+        - traefik.http.routers.autosub.entrypoints=websecure
+        - traefik.http.routers.autosub.priority=1
+        - traefik.http.routers.autosub.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.autosub.service=autosub
+        - traefik.http.services.autosub.loadbalancer.server.port=5000
+        - traefik.http.services.autosub.loadbalancer.passHostHeader=true
+
+# Definição das Redes
+networks:
+  network_public:
+    name: network_public
+    external: true 

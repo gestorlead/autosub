@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2] - 2025-05-18
+
+### Corrigido
+- Bug na correção de legendas que adicionava textos explicativos no início e final dos arquivos SRT
+- Melhoria no processamento das legendas para garantir que apenas o conteúdo SRT válido seja salvo
+- Implementada detecção e remoção automática de "sujeira" nos arquivos de legendas
+
 ## [1.1.1] - 2025-05-17
 
 ### Adicionado

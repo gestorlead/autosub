@@ -2,7 +2,7 @@
 
 O AutoSub é uma aplicação web para geração automática de legendas para vídeos. É possível fazer upload de arquivos de vídeo ou fornecer URLs de vídeos online, e o sistema gera legendas em inglês e português.
 
-![Versão](https://img.shields.io/badge/versão-1.0.0-blue)
+![Versão](https://img.shields.io/badge/versão-1.1.2-blue)
 ![Licença](https://img.shields.io/badge/licença-MIT-green)
 
 ## Funcionalidades

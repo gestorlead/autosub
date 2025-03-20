@@ -14,7 +14,7 @@ from src.utils.database import check_db_connection
 from src.utils.openai_helper import generate_social_media_post, correct_subtitles
 
 # Versão do aplicativo
-APP_VERSION = "1.1.1"
+APP_VERSION = "1.1.2"
 
 # Carrega as variáveis definidas no .env
 load_dotenv()

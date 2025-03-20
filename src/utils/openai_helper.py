@@ -136,25 +136,59 @@ def correct_subtitles(autosub_transcript, manual_transcript):
     if not API_KEY:
         return "Erro: Chave da API não configurada."
     
-    prompt = f"""
-    Compare a transcrição gerada automaticamente com a transcrição manual fornecida e corrija o arquivo SRT mantendo seu formato.
+    # Verifica se a transcrição é em inglês ou português
+    is_english = True
+    if "Qualquer" in autosub_transcript or "Você está" in autosub_transcript or "Ei" in autosub_transcript or "Você decide" in autosub_transcript:
+        is_english = False
     
-    Transcrição gerada automaticamente (formato SRT):
-    {autosub_transcript}
-    
-    Transcrição manual correta:
-    {manual_transcript}
-    
-    Instruções importantes:
-    1. REMOVA COMPLETAMENTE os nomes de personagens (como "GRIFFIN:" ou "JET:") das legendas corrigidas
-    2. Mantenha o formato exato do SRT com números de sequência e timestamps originais
-    3. Substitua apenas o texto das falas para corresponder à transcrição manual correta
-    4. Preserve as quebras de linha e a formatação das legendas
-    5. Se a transcrição manual tiver diálogos com nomes de personagens, use apenas o texto da fala, removendo os nomes dos personagens
-    6. Não adicione texto explicativo, apenas retorne o SRT corrigido
-    
-    Lembre-se que estamos trabalhando com conteúdo educativo para ensino de inglês, então a precisão das falas e expressões é essencial.
-    """
+    if is_english:
+        prompt = f"""
+        Corrija o arquivo de legendas SRT gerado automaticamente com base na transcrição manual fornecida, mantendo EXATAMENTE o mesmo formato de tempo e numeração do arquivo original.
+
+        Transcrição gerada automaticamente (formato SRT):
+        {autosub_transcript}
+        
+        Transcrição manual correta:
+        {manual_transcript}
+        
+        Instruções CRÍTICAS que DEVEM ser seguidas:
+        1. MANTENHA EXATAMENTE os mesmos números de legenda, timestamps e formatação do arquivo original
+        2. NÃO ALTERE NENHUM timestamp ou numeração do arquivo original
+        3. Substitua apenas o TEXTO das falas para corresponder à transcrição manual correta
+        4. Remova nomes de personagens (como "GRIFFIN:" ou "VOICE OVER:") das legendas
+        5. Distribua o texto corrigido entre os mesmos segmentos de tempo da legenda original
+        6. Não combine nem divida segmentos existentes
+        7. Certifique-se de que o texto em cada segmento faça sentido considerando seu timestamp
+        8. Mantenha o idioma em inglês
+        9. IMPORTANTE: Retorne APENAS o conteúdo SRT, sem nenhum texto explicativo antes ou depois
+        
+        IMPORTANTE: Você deve preservar TODOS os timestamps exatamente como estão no arquivo original. 
+        A principal reclamação dos usuários é que as legendas corrigidas estão com os tempos alterados.
+        """
+    else:
+        prompt = f"""
+        Traduza o arquivo de legendas SRT em português para corresponder à transcrição manual em inglês, mantendo EXATAMENTE o mesmo formato de tempo e numeração do arquivo original.
+        
+        Legendas em português geradas automaticamente (formato SRT):
+        {autosub_transcript}
+        
+        Transcrição manual em inglês para referência:
+        {manual_transcript}
+        
+        Instruções CRÍTICAS que DEVEM ser seguidas:
+        1. MANTENHA EXATAMENTE os mesmos números de legenda, timestamps e formatação do arquivo original
+        2. NÃO ALTERE NENHUM timestamp ou numeração do arquivo original
+        3. Traduza o texto para PORTUGUÊS BRASILEIRO fluente e natural, baseando-se na transcrição manual em inglês
+        4. Remova nomes de personagens (como "GRIFFIN:" ou "VOICE OVER:") das legendas traduzidas
+        5. Distribua o texto traduzido entre os mesmos segmentos de tempo da legenda original
+        6. Não combine nem divida segmentos existentes
+        7. Certifique-se de que o texto em cada segmento faça sentido considerando seu timestamp
+        8. Use português formal, mas natural, adaptando expressões idiomáticas quando necessário
+        9. IMPORTANTE: Retorne APENAS o conteúdo SRT, sem nenhum texto explicativo antes ou depois
+        
+        IMPORTANTE: Você deve preservar TODOS os timestamps exatamente como estão no arquivo original.
+        A principal reclamação dos usuários é que as legendas corrigidas estão com os tempos alterados e que as legendas em português não estão sendo traduzidas.
+        """
     
     # Configuração da requisição para a API
     headers = {
@@ -165,10 +199,10 @@ def correct_subtitles(autosub_transcript, manual_transcript):
     data = {
         "model": MODEL,
         "messages": [
-            {"role": "system", "content": "Você é um especialista em legendagem de vídeos educativos para ensino de inglês, com ampla experiência em transcrição de diálogos com múltiplos personagens."},
+            {"role": "system", "content": "Você é um especialista em legendagem de vídeos educativos para ensino de inglês, com ampla experiência em transcrição de diálogos e tradução português-inglês. Sua principal responsabilidade é preservar os timestamps originais e manter o formato SRT intacto, alterando APENAS o texto das legendas. IMPORTANTE: Retorne SOMENTE o conteúdo SRT, sem explicações adicionais."},
             {"role": "user", "content": prompt}
         ],
-        "temperature": 0.3,
+        "temperature": 0.2,
         "max_tokens": 1500
     }
     
@@ -183,7 +217,53 @@ def correct_subtitles(autosub_transcript, manual_transcript):
             return f"Erro ao corrigir legendas (Status {response.status_code}): {error_text}"
         
         result = response.json()
-        return result["choices"][0]["message"]["content"].strip()
+        corrected_content = result["choices"][0]["message"]["content"].strip()
+        
+        # Extrair apenas o conteúdo SRT válido, removendo texto explicativo
+        # Procurar por blocos de código (delimitados por ```) que contêm o SRT
+        import re
+        code_pattern = r'```(?:srt)?\s*([\s\S]*?)\s*```'
+        code_matches = re.findall(code_pattern, corrected_content)
+        
+        if code_matches:
+            # Use o primeiro bloco de código encontrado
+            corrected_content = code_matches[0].strip()
+        else:
+            # Se não encontrar blocos de código, tente identificar o conteúdo SRT pelo padrão
+            srt_pattern = r'^\d+\s*\n\d{2}:\d{2}:\d{2},\d{3}\s*-->'
+            if re.search(srt_pattern, corrected_content, re.MULTILINE):
+                # Se encontrar padrão de SRT no início do texto, é provável que seja conteúdo SRT puro
+                pass
+            else:
+                # Remover explicações iniciais e finais que não fazem parte do SRT
+                lines = corrected_content.split('\n')
+                start_idx = next((i for i, line in enumerate(lines) if re.match(r'^\d+\s*$', line)), 0)
+                end_idx = len(lines)
+                
+                for i in range(len(lines) - 1, -1, -1):
+                    if re.match(r'^\d+\s*$', lines[i]):
+                        # Encontrou um número de legenda, mas verifique se é o último
+                        next_line_idx = i + 1
+                        if next_line_idx < len(lines) and '-->' in lines[next_line_idx]:
+                            # É um número de legenda seguido por timestamp, então é parte do SRT
+                            pass
+                        else:
+                            # Provavelmente é explicação final
+                            end_idx = i
+                            break
+                
+                corrected_content = '\n'.join(lines[start_idx:end_idx])
+        
+        # Validação adicional para garantir que os timestamps estão preservados
+        original_lines = autosub_transcript.strip().split('\n')
+        corrected_lines = corrected_content.strip().split('\n')
+        
+        # Se o número de linhas for muito diferente, há algo errado
+        if abs(len(original_lines) - len(corrected_lines)) > 10:
+            print("DEBUG: Possível problema com a correção - número de linhas muito diferente", file=sys.stderr)
+            return corrected_content  # Retorna mesmo assim, para o usuário avaliar
+            
+        return corrected_content.strip()
     except requests.exceptions.Timeout:
         print("DEBUG: Timeout na requisição à API para correção", file=sys.stderr)
         return "Erro: Tempo esgotado ao tentar conectar com a API. Tente novamente mais tarde."

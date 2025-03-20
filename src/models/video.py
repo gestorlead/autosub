@@ -157,17 +157,36 @@ class Video:
     
     def delete(self):
         """Exclui o vídeo e seus arquivos associados."""
-        # Primeiro, excluir legendas relacionadas
+        # Primeiro, obter as legendas para excluir os arquivos físicos
+        from src.models.subtitle import Subtitle
+        subtitles = Subtitle.get_by_video(self.id)
+        
+        # Excluir os arquivos físicos de legendas
+        for subtitle in subtitles:
+            if subtitle.storage_path and os.path.exists(subtitle.storage_path):
+                try:
+                    os.remove(subtitle.storage_path)
+                    # Excluir o arquivo .bak se existir
+                    backup_file = f"{subtitle.storage_path}.bak"
+                    if os.path.exists(backup_file):
+                        os.remove(backup_file)
+                except Exception as e:
+                    print(f"Erro ao excluir arquivo de legenda: {str(e)}")
+        
+        # Excluir legendas relacionadas do banco de dados
         subtitles_query = "DELETE FROM subtitles WHERE video_id = %s;"
         execute_query(subtitles_query, params=(self.id,))
         
-        # Em seguida, excluir o vídeo do banco de dados
+        # Excluir o vídeo do banco de dados
         query = "DELETE FROM videos WHERE id = %s;"
         execute_query(query, params=(self.id,))
         
-        # Por fim, excluir os arquivos físicos, se existirem
+        # Excluir o arquivo de vídeo, se existir
         if self.is_file and self.storage_path and os.path.exists(self.storage_path):
-            os.remove(self.storage_path)
+            try:
+                os.remove(self.storage_path)
+            except Exception as e:
+                print(f"Erro ao excluir arquivo de vídeo: {str(e)}")
         
         return True
     

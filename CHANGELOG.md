@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.1.1] - 2025-05-17
+
+### Adicionado
+- Possibilidade de adicionar transcrição manual após o upload do vídeo
+- Formulário dedicado na página de detalhes do vídeo para adicionar transcrição
+
+### Melhorado
+- Correção de legendas agora preserva exatamente os timestamps originais
+- Melhor detecção de idioma na correção de legendas
+- Tradução mais precisa para português com base na transcrição em inglês
+- Feedback mais detalhado durante o processo de correção
+
+### Corrigido
+- Problema de timestamps alterados na correção de legendas
+- Legendas em português incorretamente mantidas em inglês após correção
+
 ## [1.1.0] - 2025-05-15
 
 ### Adicionado

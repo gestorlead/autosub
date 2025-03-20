@@ -14,7 +14,7 @@ from src.utils.database import check_db_connection
 from src.utils.openai_helper import generate_social_media_post, correct_subtitles
 
 # Versão do aplicativo
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.1.1"
 
 # Carrega as variáveis definidas no .env
 load_dotenv()
@@ -32,6 +32,7 @@ app = Flask(__name__,
 app.secret_key = SECRET_KEY
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 200MB max upload
+app.config['APP_VERSION'] = APP_VERSION
 bootstrap = Bootstrap5(app)
 
 # Filtro personalizado para converter quebras de linha em <br>
@@ -400,24 +401,35 @@ def correct_video_subtitles(video_id):
     
     # Obter o conteúdo das legendas
     en_content = en_subtitle.get_content()
-    pt_content = pt_subtitle.get_content()
     
-    # Corrigir legendas usando a OpenAI
+    # Primeiro, corrigir a legenda em inglês usando a transcrição manual
     corrected_en = correct_subtitles(en_content, video.description)
-    corrected_pt = correct_subtitles(pt_content, video.description)
     
-    # Atualizar os arquivos SRT
+    # Atualizar o arquivo SRT em inglês
+    en_updated = False
     if corrected_en and not corrected_en.startswith('Erro'):
-        en_subtitle.update_content(corrected_en)
+        en_updated = en_subtitle.update_content(corrected_en)
+        flash('Legenda em inglês corrigida com sucesso!', 'success')
     else:
         flash(f'Erro ao corrigir legenda em inglês: {corrected_en}', 'error')
     
-    if corrected_pt and not corrected_pt.startswith('Erro'):
-        pt_subtitle.update_content(corrected_pt)
+    # Se a legenda em inglês foi atualizada com sucesso, usar ela como referência
+    # para atualizar a legenda em português
+    if en_updated:
+        # Obter a legenda em português atual
+        pt_content = pt_subtitle.get_content()
+        
+        # Usar a legenda em inglês corrigida como referência para a legenda em português
+        corrected_pt = correct_subtitles(pt_content, corrected_en)
+        
+        if corrected_pt and not corrected_pt.startswith('Erro'):
+            pt_subtitle.update_content(corrected_pt)
+            flash('Legenda em português atualizada com base na legenda em inglês corrigida!', 'success')
+        else:
+            flash(f'Erro ao corrigir legenda em português: {corrected_pt}', 'error')
     else:
-        flash(f'Erro ao corrigir legenda em português: {corrected_pt}', 'error')
+        flash('A legenda em português não foi atualizada porque houve um erro na correção da legenda em inglês.', 'warning')
     
-    flash('Legendas corrigidas com sucesso!', 'success')
     return redirect(url_for('video_detail', video_id=video.id))
 
 @app.route('/video/<int:video_id>/generate-social', methods=['GET'])
@@ -613,6 +625,26 @@ def admin_delete_user(user_id):
     target_user.update(is_active=False)
     flash('Usuário desativado com sucesso!', 'success')
     return redirect(url_for('admin_users'))
+
+@app.route('/video/<int:video_id>/update-description', methods=['POST'])
+@login_required
+def update_video_description(video_id):
+    """Atualiza a descrição (transcrição manual) de um vídeo."""
+    user = get_current_user()
+    video = Video.get_by_id(video_id)
+    
+    if not video or video.user_id != user['user_id']:
+        flash('Vídeo não encontrado ou sem permissão.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    description = request.form.get('description', '').strip()
+    
+    if video.update_details(description=description):
+        flash('Transcrição manual salva com sucesso! Agora você pode usar a função de correção de legendas.', 'success')
+    else:
+        flash('Erro ao salvar a transcrição manual. Tente novamente.', 'error')
+    
+    return redirect(url_for('video_detail', video_id=video.id))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

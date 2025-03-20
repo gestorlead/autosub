@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.3] - 2025-05-25
+
+### Melhorias
+- Melhoria de contraste no rodapé para o modo escuro
+- Aumento do contraste nos textos de formulários (form-text) no modo escuro
+- Correção da animação do botão de play na página inicial
+- Adição do favicon personalizado "CC" para a identidade visual do site
+
 ## [1.1.2] - 2025-05-18
 
 ### Corrigido

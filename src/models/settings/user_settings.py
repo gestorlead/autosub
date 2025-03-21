@@ -1,7 +1,7 @@
 from src.utils.database import execute_query
 
 class UserSettings:
-    def __init__(self, id=None, user_id=None, transcription_service='autosub', 
+    def __init__(self, id=None, user_id=None, transcription_service='whisper', 
                  openai_api_key=None, created_at=None, updated_at=None):
         self.id = id
         self.user_id = user_id
@@ -30,7 +30,7 @@ class UserSettings:
         return UserSettings.create(user_id)
     
     @staticmethod
-    def create(user_id, transcription_service='autosub', openai_api_key=None):
+    def create(user_id, transcription_service='whisper', openai_api_key=None):
         """Cria uma nova configuração para o usuário."""
         query = """
         INSERT INTO user_settings (user_id, transcription_service, openai_api_key)
@@ -68,4 +68,4 @@ class UserSettings:
     def get_transcription_service(user_id):
         """Retorna apenas o serviço de transcrição configurado para o usuário."""
         settings = UserSettings.get_by_user_id(user_id)
-        return settings.transcription_service if settings else 'autosub' 
+        return settings.transcription_service 

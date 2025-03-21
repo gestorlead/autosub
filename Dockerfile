@@ -10,7 +10,7 @@ RUN git clone https://github.com/agermanidis/autosub.git /opt/autosub
 RUN pip install --no-cache-dir -e /opt/autosub && \
     pip install Flask flask-basicauth gunicorn python-dotenv psycopg2-binary requests \
     PyYAML Werkzeug==2.3.7 youtube-dl bootstrap-flask Flask-SQLAlchemy Flask-Migrate \
-    Flask-Login Flask-WTF email_validator Flask-Moment
+    Flask-Login Flask-WTF email_validator Flask-Moment openai
 
 # Define o diretório de trabalho
 WORKDIR /app
@@ -30,4 +30,4 @@ ENV FLASK_APP=app.py
 EXPOSE 5000
 
 # Script de inicialização que configura o banco de dados e inicia a aplicação
-CMD ["sh", "-c", "sleep 10 && python -m src.migrations.setup_db && python -m src.migrations.add_is_admin_column && gunicorn app:app --bind 0.0.0.0:5000 --timeout 300 --workers 2"]
+CMD ["sh", "-c", "sleep 10 && python -m src.migrations.setup_db && python -m src.migrations.add_is_admin_column && python -m src.migrations.user_settings && gunicorn app:app --bind 0.0.0.0:5000 --timeout 300 --workers 2"]

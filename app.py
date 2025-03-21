@@ -337,6 +337,8 @@ def process_video(video_id):
         # Verificar configurações do usuário
         transcription_service = UserSettings.get_transcription_service(video.user_id)
         
+        print(f"[INFO] Serviço de transcrição selecionado: {transcription_service}")
+        
         if transcription_service == 'whisper':
             # Obter a chave da API OpenAI
             user_settings = UserSettings.get_by_user_id(video.user_id)
@@ -345,59 +347,187 @@ def process_video(video_id):
             if not openai_api_key:
                 # Fallback para o método padrão se não tiver a chave
                 transcription_service = 'autosub'
+                print(f"[AVISO] Chave da API OpenAI não encontrada, usando fallback para: {transcription_service}")
+            else:
+                print(f"[INFO] Chave da API OpenAI encontrada, usando: {transcription_service}")
         
         # Gerar legendas em inglês
         en_srt_path = f"{base_path}_en.srt"
         
         if transcription_service == 'whisper':
-            # Usar a API Whisper da OpenAI
-            # (Código para implementação futura - por enquanto usa o método padrão)
-            # Exemplo básico de como seria:
-            # with open(video_path, 'rb') as audio_file:
-            #     transcription = openai.Audio.transcribe("whisper-1", audio_file, api_key=openai_api_key)
-            # 
-            # # Converter a transcrição para formato SRT
-            # with open(en_srt_path, 'w', encoding='utf-8') as srt_file:
-            #     # Implementar a formatação SRT
-            #     pass
-            
-            # Por enquanto, usamos o método padrão
-            command = [
-                'autosub',
-                video_path,
-                '-o', en_srt_path
-            ]
-            subprocess.run(command, check=True)
+            print(f"[INFO] Usando o serviço Whisper para transcrição")
+            try:
+                # Importar a biblioteca OpenAI
+                try:
+                    import openai
+                    print(f"[INFO] Biblioteca OpenAI importada com sucesso")
+                except ImportError:
+                    print(f"[ERRO] Biblioteca OpenAI não encontrada, instalando...")
+                    subprocess.run(['pip', 'install', 'openai'], check=True)
+                    import openai
+                    print(f"[INFO] Biblioteca OpenAI instalada e importada com sucesso")
+                
+                # Extrair áudio do vídeo (apenas o áudio é necessário para Whisper)
+                print(f"[INFO] Extraindo áudio do vídeo...")
+                audio_path = f"{base_path}.wav"
+                
+                # Usar ffmpeg para extrair o áudio
+                ffmpeg_cmd = [
+                    'ffmpeg', '-y', '-i', video_path, 
+                    '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', 
+                    '-ac', '1', audio_path
+                ]
+                print(f"[INFO] Executando comando: {' '.join(ffmpeg_cmd)}")
+                subprocess.run(ffmpeg_cmd, check=True, stderr=subprocess.PIPE)
+                
+                # Verificar se o arquivo de áudio existe
+                if not os.path.exists(audio_path):
+                    raise Exception(f"Arquivo de áudio não foi gerado: {audio_path}")
+                
+                print(f"[INFO] Arquivo de áudio gerado com sucesso: {audio_path}")
+                
+                # Verificar tamanho do arquivo de áudio
+                audio_file_size = os.path.getsize(audio_path) / (1024 * 1024)  # Tamanho em MB
+                print(f"[INFO] Tamanho do arquivo de áudio: {audio_file_size:.2f} MB")
+                
+                if audio_file_size > 25:
+                    print(f"[AVISO] Arquivo de áudio é muito grande para a API Whisper (> 25MB). Tentando comprimir...")
+                    compressed_audio_path = f"{base_path}_compressed.mp3"
+                    compress_cmd = [
+                        'ffmpeg', '-y', '-i', audio_path,
+                        '-codec:a', 'libmp3lame', '-qscale:a', '9',
+                        compressed_audio_path
+                    ]
+                    subprocess.run(compress_cmd, check=True, stderr=subprocess.PIPE)
+                    audio_path = compressed_audio_path
+                    print(f"[INFO] Áudio comprimido: {audio_path}, tamanho: {os.path.getsize(audio_path) / (1024 * 1024):.2f} MB")
+                
+                # Inicializar cliente OpenAI
+                print(f"[INFO] Configurando cliente OpenAI com chave API")
+                client = openai.OpenAI(api_key=openai_api_key)
+                
+                # Enviar para a API Whisper
+                print(f"[INFO] Enviando áudio para API Whisper...")
+                with open(audio_path, 'rb') as audio_file:
+                    # Usar a API para transcrição
+                    transcription = client.audio.transcriptions.create(
+                        model="whisper-1",
+                        file=audio_file,
+                        response_format="srt"
+                    )
+                    
+                    # Salvar a transcrição no formato SRT
+                    print(f"[INFO] Salvando transcrição no formato SRT...")
+                    with open(en_srt_path, 'w', encoding='utf-8') as srt_file:
+                        srt_file.write(transcription)
+                    
+                    print(f"[INFO] Legendas em inglês geradas com sucesso em: {en_srt_path}")
+                
+                # Criar registro da legenda em inglês
+                Subtitle.create(video.id, 'en', en_srt_path)
+                
+                # Traduzir para português usando a API OpenAI
+                print(f"[INFO] Traduzindo legendas para português usando OpenAI...")
+                pt_srt_path = f"{base_path}_pt.srt"
+                
+                # Ler o conteúdo do arquivo SRT em inglês
+                with open(en_srt_path, 'r', encoding='utf-8') as srt_file:
+                    srt_content = srt_file.read()
+                
+                # Processar o SRT para separar números, tempos e texto
+                import re
+                pattern = r'(\d+)\n(\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3})\n(.*?)(?=\n\n\d+\n|\Z)'
+                srt_parts = re.findall(pattern, srt_content, re.DOTALL)
+                
+                # Traduzir cada parte do SRT
+                translated_parts = []
+                for idx, time_code, text in srt_parts:
+                    print(f"[INFO] Traduzindo bloco {idx}...")
+                    response = client.chat.completions.create(
+                        model="gpt-3.5-turbo",
+                        messages=[
+                            {"role": "system", "content": "Traduza o seguinte texto do inglês para o português brasileiro. Mantenha o mesmo formato e não adicione informações extras."},
+                            {"role": "user", "content": text}
+                        ]
+                    )
+                    
+                    translated_text = response.choices[0].message.content.strip()
+                    
+                    # Adicionar o bloco traduzido
+                    translated_parts.append((idx, time_code, translated_text))
+                
+                # Montar o arquivo SRT em português
+                with open(pt_srt_path, 'w', encoding='utf-8') as pt_file:
+                    for idx, time_code, translated_text in translated_parts:
+                        pt_file.write(f"{idx}\n{time_code}\n{translated_text}\n\n")
+                
+                print(f"[INFO] Legendas em português geradas com sucesso em: {pt_srt_path}")
+                
+                # Criar registro da legenda em português
+                Subtitle.create(video.id, 'pt', pt_srt_path)
+                
+            except Exception as e:
+                print(f"[ERRO] Erro ao processar com Whisper API: {str(e)}")
+                print(traceback.format_exc())
+                print(f"[INFO] Usando método fallback (autosub)...")
+                
+                # Usar o método padrão para gerar legendas em inglês
+                command = [
+                    'autosub',
+                    video_path,
+                    '-o', en_srt_path
+                ]
+                subprocess.run(command, check=True)
+                
+                # Criar registro da legenda em inglês
+                Subtitle.create(video.id, 'en', en_srt_path)
+                
+                # Traduzir para português usando autosub
+                pt_srt_path = f"{base_path}_pt.srt"
+                command = [
+                    'autosub',
+                    video_path,
+                    '-S', 'en',
+                    '-D', 'pt',
+                    '-K', GOOGLE_API_KEY,
+                    '-o', pt_srt_path
+                ]
+                subprocess.run(command, check=True)
+                
+                # Criar registro da legenda em português
+                Subtitle.create(video.id, 'pt', pt_srt_path)
         else:
             # Usar o método padrão (autosub)
+            print(f"[INFO] Usando método padrão (autosub)")
             command = [
                 'autosub',
                 video_path,
                 '-o', en_srt_path
             ]
             subprocess.run(command, check=True)
-        
-        # Criar registro da legenda em inglês
-        Subtitle.create(video.id, 'en', en_srt_path)
-        
-        # Traduzir para português
-        pt_srt_path = f"{base_path}_pt.srt"
-        command = [
-            'autosub',
-            video_path,
-            '-S', 'en',
-            '-D', 'pt',
-            '-K', GOOGLE_API_KEY,
-            '-o', pt_srt_path
-        ]
-        subprocess.run(command, check=True)
-        
-        # Criar registro da legenda em português
-        Subtitle.create(video.id, 'pt', pt_srt_path)
+            
+            # Criar registro da legenda em inglês
+            Subtitle.create(video.id, 'en', en_srt_path)
+            
+            # Traduzir para português
+            pt_srt_path = f"{base_path}_pt.srt"
+            command = [
+                'autosub',
+                video_path,
+                '-S', 'en',
+                '-D', 'pt',
+                '-K', GOOGLE_API_KEY,
+                '-o', pt_srt_path
+            ]
+            subprocess.run(command, check=True)
+            
+            # Criar registro da legenda em português
+            Subtitle.create(video.id, 'pt', pt_srt_path)
         
         video.update_status('completed')
     except Exception as e:
-        print(f"Erro ao processar vídeo: {e}")
+        print(f"[ERRO] Erro ao processar vídeo: {e}")
+        print(traceback.format_exc())
         video.update_status('error')
 
 @app.route('/health')

@@ -9,9 +9,13 @@ import re
 from markupsafe import Markup
 
 from src.models import User, Video, Subtitle
+from src.models.settings import UserSettings
 from src.utils import login_required, get_current_user, create_session, logout_user
 from src.utils.database import check_db_connection
 from src.utils.openai_helper import generate_social_media_post, correct_subtitles
+
+# Importando a migração de configurações
+from src.migrations.user_settings import create_user_settings_table
 
 # Versão do aplicativo
 APP_VERSION = "1.1.3"
@@ -34,6 +38,9 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 200MB max upload
 app.config['APP_VERSION'] = APP_VERSION
 bootstrap = Bootstrap5(app)
+
+# Criar tabelas se não existirem
+create_user_settings_table()
 
 # Filtro personalizado para converter quebras de linha em <br>
 @app.template_filter('nl2br')
@@ -327,14 +334,48 @@ def process_video(video_id):
         # Gerar nome base para legendas
         base_path = os.path.splitext(video_path)[0]
         
+        # Verificar configurações do usuário
+        transcription_service = UserSettings.get_transcription_service(video.user_id)
+        
+        if transcription_service == 'whisper':
+            # Obter a chave da API OpenAI
+            user_settings = UserSettings.get_by_user_id(video.user_id)
+            openai_api_key = user_settings.openai_api_key
+            
+            if not openai_api_key:
+                # Fallback para o método padrão se não tiver a chave
+                transcription_service = 'autosub'
+        
         # Gerar legendas em inglês
         en_srt_path = f"{base_path}_en.srt"
-        command = [
-            'autosub',
-            video_path,
-            '-o', en_srt_path
-        ]
-        subprocess.run(command, check=True)
+        
+        if transcription_service == 'whisper':
+            # Usar a API Whisper da OpenAI
+            # (Código para implementação futura - por enquanto usa o método padrão)
+            # Exemplo básico de como seria:
+            # with open(video_path, 'rb') as audio_file:
+            #     transcription = openai.Audio.transcribe("whisper-1", audio_file, api_key=openai_api_key)
+            # 
+            # # Converter a transcrição para formato SRT
+            # with open(en_srt_path, 'w', encoding='utf-8') as srt_file:
+            #     # Implementar a formatação SRT
+            #     pass
+            
+            # Por enquanto, usamos o método padrão
+            command = [
+                'autosub',
+                video_path,
+                '-o', en_srt_path
+            ]
+            subprocess.run(command, check=True)
+        else:
+            # Usar o método padrão (autosub)
+            command = [
+                'autosub',
+                video_path,
+                '-o', en_srt_path
+            ]
+            subprocess.run(command, check=True)
         
         # Criar registro da legenda em inglês
         Subtitle.create(video.id, 'en', en_srt_path)
@@ -645,6 +686,67 @@ def update_video_description(video_id):
         flash('Erro ao salvar a transcrição manual. Tente novamente.', 'error')
     
     return redirect(url_for('video_detail', video_id=video.id))
+
+@app.route('/settings')
+@login_required
+def settings():
+    """Página de configurações gerais do usuário."""
+    user = get_current_user()
+    user_settings = UserSettings.get_by_user_id(user['user_id'])
+    
+    return render_template('settings/index.html', 
+                          user_settings=user_settings,
+                          active_tab='general')
+
+@app.route('/settings/update', methods=['POST'])
+@login_required
+def settings_update():
+    """Atualiza as configurações do usuário."""
+    user = get_current_user()
+    user_settings = UserSettings.get_by_user_id(user['user_id'])
+    
+    transcription_service = request.form.get('transcription_service')
+    openai_api_key = request.form.get('openai_api_key')
+    
+    # Validar a opção de serviço
+    if transcription_service not in ['autosub', 'whisper']:
+        transcription_service = 'autosub'
+    
+    # Se escolheu whisper, verificar se tem a API key
+    if transcription_service == 'whisper' and (not openai_api_key or openai_api_key.strip() == ''):
+        flash('Para usar o Whisper, você precisa fornecer uma chave da API OpenAI.', 'error')
+        return redirect(url_for('settings'))
+    
+    # Atualizar as configurações
+    user_settings.update(
+        transcription_service=transcription_service,
+        openai_api_key=openai_api_key
+    )
+    
+    flash('Configurações atualizadas com sucesso!', 'success')
+    return redirect(url_for('settings'))
+
+@app.route('/settings/prompts')
+@login_required
+def settings_prompts():
+    """Página de configurações de prompts."""
+    user = get_current_user()
+    user_settings = UserSettings.get_by_user_id(user['user_id'])
+    
+    return render_template('settings/prompts.html', 
+                          user_settings=user_settings,
+                          active_tab='prompts')
+
+@app.route('/settings/models')
+@login_required
+def settings_models():
+    """Página de configurações de modelos."""
+    user = get_current_user()
+    user_settings = UserSettings.get_by_user_id(user['user_id'])
+    
+    return render_template('settings/models.html', 
+                          user_settings=user_settings,
+                          active_tab='models')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

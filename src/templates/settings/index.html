@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}Configurações - AutoSub{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-cogs me-2"></i>Configurações
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('settings') }}" class="list-group-item list-group-item-action {% if active_tab == 'general' %}active{% endif %}">
+                    <i class="fas fa-sliders-h me-2"></i>Geral
+                </a>
+                <a href="{{ url_for('settings_prompts') }}" class="list-group-item list-group-item-action {% if active_tab == 'prompts' %}active{% endif %}">
+                    <i class="fas fa-comment-dots me-2"></i>Prompts
+                </a>
+                <a href="{{ url_for('settings_models') }}" class="list-group-item list-group-item-action {% if active_tab == 'models' %}active{% endif %}">
+                    <i class="fas fa-microchip me-2"></i>Modelos
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-sliders-h me-2"></i>Configurações Gerais
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('settings_update') }}">
+                    <div class="mb-3">
+                        <label for="transcription_service" class="form-label">Serviço de Transcrição</label>
+                        <select class="form-select" id="transcription_service" name="transcription_service">
+                            <option value="autosub" {% if user_settings.transcription_service == 'autosub' %}selected{% endif %}>AutoSub (Padrão)</option>
+                            <option value="whisper" {% if user_settings.transcription_service == 'whisper' %}selected{% endif %}>OpenAI Whisper</option>
+                        </select>
+                        <div class="form-text">
+                            O AutoSub usa o serviço nativo para transcrição. O Whisper usa a API da OpenAI para transcrições mais precisas.
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="openai_api_key" class="form-label">Chave da API OpenAI (para Whisper)</label>
+                        <input type="password" class="form-control" id="openai_api_key" name="openai_api_key" 
+                               value="{{ user_settings.openai_api_key if user_settings.openai_api_key else '' }}">
+                        <div class="form-text">
+                            Necessária apenas se você estiver usando o Whisper para transcrição.
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Salvar Configurações
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

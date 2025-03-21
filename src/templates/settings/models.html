@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}Configurações de Modelos - AutoSub{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-cogs me-2"></i>Configurações
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('settings') }}" class="list-group-item list-group-item-action {% if active_tab == 'general' %}active{% endif %}">
+                    <i class="fas fa-sliders-h me-2"></i>Geral
+                </a>
+                <a href="{{ url_for('settings_prompts') }}" class="list-group-item list-group-item-action {% if active_tab == 'prompts' %}active{% endif %}">
+                    <i class="fas fa-comment-dots me-2"></i>Prompts
+                </a>
+                <a href="{{ url_for('settings_models') }}" class="list-group-item list-group-item-action {% if active_tab == 'models' %}active{% endif %}">
+                    <i class="fas fa-microchip me-2"></i>Modelos
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-microchip me-2"></i>Configurações de Modelos
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Esta funcionalidade será implementada em breve. Aqui você poderá configurar os modelos de IA para geração de legendas.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -36,6 +36,7 @@ def format_timestamp(seconds):
 # Importando a migração de configurações
 from src.migrations.user_settings import create_user_settings_table
 from src.migrations.update_user_settings import update_user_settings_table
+from src.migrations.update_user_settings_prompts import update_user_settings_prompts
 
 # Versão do aplicativo
 APP_VERSION = "1.1.4"
@@ -65,6 +66,7 @@ logger.info(f"Diretório de uploads configurado em: {UPLOAD_FOLDER}")
 # Criar tabelas se não existirem
 create_user_settings_table()
 update_user_settings_table()
+update_user_settings_prompts()
 
 # Filtro personalizado para converter quebras de linha em <br>
 @app.template_filter('nl2br')
@@ -219,8 +221,8 @@ def video_detail(video_id):
     en_subtitle = next((s for s in subtitles if s.language == 'en'), None)
     if en_subtitle:
         transcript = en_subtitle.extract_text()
-        social_media_text['instagram'] = generate_social_media_post(transcript, 'instagram')
-        social_media_text['tiktok'] = generate_social_media_post(transcript, 'tiktok')
+        social_media_text['instagram'] = generate_social_media_post(transcript, 'instagram', user['user_id'])
+        social_media_text['tiktok'] = generate_social_media_post(transcript, 'tiktok', user['user_id'])
     
     return render_template('video_detail.html', video=video, subtitles=subtitles, social_media_text=social_media_text)
 
@@ -688,8 +690,8 @@ def generate_social_media_content(video_id):
     if video.description and video.description.strip():
         transcript = video.description
     
-    # Gerar texto para rede social
-    social_text = generate_social_media_post(transcript, platform)
+    # Gerar texto para rede social, passando o ID do usuário
+    social_text = generate_social_media_post(transcript, platform, user['user_id'])
     
     return jsonify({
         'platform': platform,
@@ -958,14 +960,22 @@ def settings_update_prompts():
     user = get_current_user()
     user_settings = UserSettings.get_by_user_id(user['user_id'])
     
-    custom_prompt = request.form.get('custom_prompt')
+    # Identificar qual tipo de prompt está sendo atualizado
+    prompt_type = request.form.get('prompt_type', '')
     
-    # Atualizar as configurações
-    user_settings.update(
-        custom_prompt=custom_prompt
-    )
+    if prompt_type == 'instagram':
+        instagram_prompt = request.form.get('instagram_prompt')
+        # Atualizar apenas o prompt do Instagram
+        user_settings.update(instagram_prompt=instagram_prompt)
+        flash('Prompt para Instagram atualizado com sucesso!', 'success')
+    elif prompt_type == 'tiktok':
+        tiktok_prompt = request.form.get('tiktok_prompt')
+        # Atualizar apenas o prompt do TikTok
+        user_settings.update(tiktok_prompt=tiktok_prompt)
+        flash('Prompt para TikTok atualizado com sucesso!', 'success')
+    else:
+        flash('Tipo de prompt não reconhecido.', 'error')
     
-    flash('Configurações de prompts atualizadas com sucesso!', 'success')
     return redirect(url_for('settings_prompts'))
 
 @app.route('/settings/models')

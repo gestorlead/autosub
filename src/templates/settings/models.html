@@ -13,6 +13,9 @@
                 <a href="{{ url_for('settings') }}" class="list-group-item list-group-item-action {% if active_tab == 'general' %}active{% endif %}">
                     <i class="fas fa-sliders-h me-2"></i>Geral
                 </a>
+                <a href="{{ url_for('settings_api') }}" class="list-group-item list-group-item-action {% if active_tab == 'api' %}active{% endif %}">
+                    <i class="fas fa-key me-2"></i>API
+                </a>
                 <a href="{{ url_for('settings_prompts') }}" class="list-group-item list-group-item-action {% if active_tab == 'prompts' %}active{% endif %}">
                     <i class="fas fa-comment-dots me-2"></i>Prompts
                 </a>

@@ -14,6 +14,12 @@ endblock %} {% block content %}
           <i class="fas fa-sliders-h me-2"></i>Geral
         </a>
         <a
+          href="{{ url_for('settings_api') }}"
+          class="list-group-item list-group-item-action {% if active_tab == 'api' %}active{% endif %}"
+        >
+          <i class="fas fa-key me-2"></i>API
+        </a>
+        <a
           href="{{ url_for('settings_prompts') }}"
           class="list-group-item list-group-item-action {% if active_tab == 'prompts' %}active{% endif %}"
         >
@@ -34,55 +40,134 @@ endblock %} {% block content %}
       <div class="card-header bg-primary text-white">
         <i class="fas fa-comment-dots me-2"></i>Configurações de Prompts
       </div>
-      <div class="card-body">
-        <form method="post" action="{{ url_for('settings_update_prompts') }}">
-          <div class="mb-3">
-            <label for="custom_prompt" class="form-label"
-              >Prompt Personalizado</label
+      <div class="card-body bg-white">
+        <ul class="nav nav-tabs mb-3" id="promptTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button
+              class="nav-link active"
+              id="instagram-tab"
+              data-bs-toggle="tab"
+              data-bs-target="#instagram-content"
+              type="button"
+              role="tab"
+              aria-controls="instagram-content"
+              aria-selected="true"
             >
-            <textarea
-              class="form-control"
-              id="custom_prompt"
-              name="custom_prompt"
-              rows="6"
-            >
-{{ user_settings.custom_prompt if user_settings.custom_prompt else '' }}</textarea
-            >
-            <div class="form-text">
-              Use um prompt personalizado para orientar a geração e tradução de
-              legendas.
-              <br />Deixe em branco para usar o prompt padrão do sistema.
-            </div>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">Sugestões de Prompts</label>
-            <div class="card">
-              <div class="card-body">
-                <h6>Prompt para Tradução Formal</h6>
-                <pre class="border p-2 bg-light">
-Traduza o seguinte texto mantendo um tom formal e profissional. Preserve todos os termos técnicos no idioma original quando apropriado.</pre
-                >
-
-                <h6 class="mt-3">Prompt para Tradução Coloquial</h6>
-                <pre class="border p-2 bg-light">
-Traduza o texto para um tom coloquial e natural, como seria falado no dia a dia. Adapte expressões idiomáticas para equivalentes culturais apropriados.</pre
-                >
-
-                <h6 class="mt-3">Prompt para Legendas Educacionais</h6>
-                <pre class="border p-2 bg-light">
-Traduza o texto com foco em clareza e precisão para fins educacionais. Simplifique conceitos complexos quando necessário, mas mantenha a precisão técnica.</pre
-                >
-              </div>
-            </div>
-          </div>
-
-          <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-            <button type="submit" class="btn btn-primary">
-              <i class="fas fa-save me-2"></i>Salvar Configurações
+              <i class="fab fa-instagram me-2"></i>Instagram
             </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button
+              class="nav-link"
+              id="tiktok-tab"
+              data-bs-toggle="tab"
+              data-bs-target="#tiktok-content"
+              type="button"
+              role="tab"
+              aria-controls="tiktok-content"
+              aria-selected="false"
+            >
+              <i class="fab fa-tiktok me-2"></i>TikTok
+            </button>
+          </li>
+        </ul>
+
+        <div class="tab-content" id="promptTabsContent">
+          <!-- Instagram Tab -->
+          <div
+            class="tab-pane fade show active"
+            id="instagram-content"
+            role="tabpanel"
+            aria-labelledby="instagram-tab"
+          >
+            <form
+              method="post"
+              action="{{ url_for('settings_update_prompts') }}"
+            >
+              <input type="hidden" name="prompt_type" value="instagram" />
+              <div class="mb-3">
+                <label for="instagram_prompt" class="form-label"
+                  >Prompt para Instagram</label
+                >
+                <textarea
+                  class="form-control"
+                  id="instagram_prompt"
+                  name="instagram_prompt"
+                  rows="10"
+                >
+{{ user_settings.instagram_prompt if user_settings.instagram_prompt else 'Crie uma legenda atraente para um post do Instagram sobre ensino de inglês com base na seguinte transcrição:
+
+Transcrição: {transcript}
+
+A legenda deve:
+- Começar com uma dica valiosa de inglês relacionada ao conteúdo da transcrição
+- Destacar a importância da expressão ou tema abordado no uso cotidiano do inglês
+- Explicar brevemente como e quando usar a expressão ou construção gramatical mencionada
+- Ter aproximadamente 300-500 caracteres
+- Incluir 5-8 hashtags relevantes para aprendizagem de inglês (#englishlessons #dicasdeingles #aprenderingles)
+- Incluir um call-to-action convidando os seguidores a praticar ou comentar
+- Ter um tom profissional, mas amigável e encorajador para estudantes de inglês' }}</textarea
+                >
+                <div class="form-text">
+                  Use {transcript} como placeholder para a transcrição do vídeo.
+                </div>
+              </div>
+
+              <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="submit" class="btn btn-primary">
+                  <i class="fas fa-save me-2"></i>Salvar Prompt Instagram
+                </button>
+              </div>
+            </form>
           </div>
-        </form>
+
+          <!-- TikTok Tab -->
+          <div
+            class="tab-pane fade"
+            id="tiktok-content"
+            role="tabpanel"
+            aria-labelledby="tiktok-tab"
+          >
+            <form
+              method="post"
+              action="{{ url_for('settings_update_prompts') }}"
+            >
+              <input type="hidden" name="prompt_type" value="tiktok" />
+              <div class="mb-3">
+                <label for="tiktok_prompt" class="form-label"
+                  >Prompt para TikTok</label
+                >
+                <textarea
+                  class="form-control"
+                  id="tiktok_prompt"
+                  name="tiktok_prompt"
+                  rows="10"
+                >
+{{ user_settings.tiktok_prompt if user_settings.tiktok_prompt else 'Crie uma legenda atraente para um vídeo do TikTok sobre aprendizagem de inglês com base na seguinte transcrição:
+
+Transcrição: {transcript}
+
+A legenda deve:
+- Destacar dicas de aprendizagem de inglês presentes na transcrição
+- Ter entre 150-300 caracteres
+- Incluir 3-5 hashtags relevantes para aprendizagem de idiomas (#aprendendoingles #dicasdeingles #englishfluency)
+- Ser envolvente e educativa
+- Enfatizar a importância de aprender a expressão ou tema do vídeo
+- Ter um tom incentivador para quem está aprendendo inglês' }}</textarea
+                >
+                <div class="form-text">
+                  Use {transcript} como placeholder para a transcrição do vídeo.
+                </div>
+              </div>
+
+              <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="submit" class="btn btn-primary">
+                  <i class="fas fa-save me-2"></i>Salvar Prompt TikTok
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       </div>
     </div>
   </div>

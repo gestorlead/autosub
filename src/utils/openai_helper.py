@@ -39,13 +39,14 @@ else:
         API_URL = OPENAI_API_URL
         MODEL = "gpt-4o-mini"
 
-def generate_social_media_post(transcript, platform="instagram"):
+def generate_social_media_post(transcript, platform="instagram", user_id=None):
     """
     Gera um texto para publicação no Instagram/TikTok baseado na transcrição do vídeo.
     
     Args:
         transcript (str): Transcrição do vídeo.
         platform (str): Plataforma para a qual o texto será criado ('instagram' ou 'tiktok').
+        user_id (int, optional): ID do usuário para obter prompts personalizados.
         
     Returns:
         str: Texto formatado para publicação.
@@ -53,36 +54,62 @@ def generate_social_media_post(transcript, platform="instagram"):
     if not API_KEY:
         return "Erro: Chave da API não configurada."
     
-    # Cria o prompt com base na plataforma selecionada
-    if platform.lower() == "tiktok":
-        prompt = f"""
-        Crie uma legenda atraente para um vídeo do TikTok sobre aprendizagem de inglês com base na seguinte transcrição:
-        
-        Transcrição: {transcript}
-        
-        A legenda deve:
-        - Destacar dicas de aprendizagem de inglês presentes na transcrição
-        - Ter entre 150-300 caracteres
-        - Incluir 3-5 hashtags relevantes para aprendizagem de idiomas (#aprendendoingles #dicasdeingles #englishfluency)
-        - Ser envolvente e educativa
-        - Enfatizar a importância de aprender a expressão ou tema do vídeo
-        - Ter um tom incentivador para quem está aprendendo inglês
-        """
-    else:  # Instagram por padrão
-        prompt = f"""
-        Crie uma legenda atraente para um post do Instagram sobre ensino de inglês com base na seguinte transcrição:
-        
-        Transcrição: {transcript}
-        
-        A legenda deve:
-        - Começar com uma dica valiosa de inglês relacionada ao conteúdo da transcrição
-        - Destacar a importância da expressão ou tema abordado no uso cotidiano do inglês
-        - Explicar brevemente como e quando usar a expressão ou construção gramatical mencionada
-        - Ter aproximadamente 300-500 caracteres
-        - Incluir 5-8 hashtags relevantes para aprendizagem de inglês (#englishlessons #dicasdeingles #aprenderingles)
-        - Incluir um call-to-action convidando os seguidores a praticar ou comentar
-        - Ter um tom profissional, mas amigável e encorajador para estudantes de inglês
-        """
+    # Tentar obter prompts personalizados se o user_id for fornecido
+    custom_prompt = None
+    user_settings = None
+    
+    if user_id:
+        try:
+            from src.models.settings import UserSettings
+            user_settings = UserSettings.get_by_user_id(user_id)
+            
+            if platform.lower() == "tiktok" and user_settings.tiktok_prompt:
+                custom_prompt = user_settings.tiktok_prompt
+            elif platform.lower() == "instagram" and user_settings.instagram_prompt:
+                custom_prompt = user_settings.instagram_prompt
+        except:
+            # Se ocorrer erro, continua com os prompts padrão
+            print("Erro ao buscar prompts personalizados, usando padrão", file=sys.stderr)
+    
+    # Se encontrou um prompt personalizado, usa ele substituindo o {transcript} pelo transcript real
+    if custom_prompt:
+        prompt = custom_prompt.replace("{transcript}", transcript)
+    else:
+        # Usa o prompt padrão
+        if platform.lower() == "tiktok":
+            prompt = f"""
+            Crie uma legenda atraente para um vídeo do TikTok sobre aprendizagem de inglês com base na seguinte transcrição:
+            
+            Transcrição: {transcript}
+            
+            A legenda deve:
+            - Destacar dicas de aprendizagem de inglês presentes na transcrição
+            - Ter entre 150-300 caracteres
+            - Incluir 3-5 hashtags relevantes para aprendizagem de idiomas (#aprendendoingles #dicasdeingles #englishfluency)
+            - Ser envolvente e educativa
+            - Enfatizar a importância de aprender a expressão ou tema do vídeo
+            - Ter um tom incentivador para quem está aprendendo inglês
+            """
+        else:  # Instagram por padrão
+            prompt = f"""
+            Crie uma legenda atraente para um post do Instagram sobre ensino de inglês com base na seguinte transcrição:
+            
+            Transcrição: {transcript}
+            
+            A legenda deve:
+            - Começar com uma dica valiosa de inglês relacionada ao conteúdo da transcrição
+            - Destacar a importância da expressão ou tema abordado no uso cotidiano do inglês
+            - Explicar brevemente como e quando usar a expressão ou construção gramatical mencionada
+            - Ter aproximadamente 300-500 caracteres
+            - Incluir 5-8 hashtags relevantes para aprendizagem de inglês (#englishlessons #dicasdeingles #aprenderingles)
+            - Incluir um call-to-action convidando os seguidores a praticar ou comentar
+            - Ter um tom profissional, mas amigável e encorajador para estudantes de inglês
+            """
+    
+    # Use o modelo configurado pelo usuário, se disponível
+    model = MODEL
+    if user_settings and hasattr(user_settings, 'openai_model') and user_settings.openai_model:
+        model = user_settings.openai_model
     
     # Configuração da requisição para a API
     headers = {
@@ -91,7 +118,7 @@ def generate_social_media_post(transcript, platform="instagram"):
     }
     
     data = {
-        "model": MODEL,
+        "model": model,
         "messages": [
             {"role": "system", "content": "Você é um professor de inglês especialista em marketing digital que cria conteúdo educativo para redes sociais focado no ensino de inglês."},
             {"role": "user", "content": prompt}

@@ -883,39 +883,62 @@ def settings():
     user = get_current_user()
     user_settings = UserSettings.get_by_user_id(user['user_id'])
     
-    return render_template('settings/index.html', 
+    return render_template('settings/general.html', 
                           user_settings=user_settings,
                           active_tab='general')
 
 @app.route('/settings/update', methods=['POST'])
 @login_required
 def settings_update():
-    """Atualiza as configurações do usuário."""
+    """Atualiza as configurações gerais do usuário."""
     user = get_current_user()
     user_settings = UserSettings.get_by_user_id(user['user_id'])
     
-    #transcription_service = request.form.get('transcription_service')
-    transcription_service = 'whisper'
-    
-    openai_api_key = request.form.get('openai_api_key')
+    transcription_service = request.form.get('transcription_service')
     
     # Validar a opção de serviço
     if transcription_service not in ['autosub', 'whisper']:
         transcription_service = 'whisper'
     
-    # Se escolheu whisper, verificar se tem a API key
-    if transcription_service == 'whisper' and (not openai_api_key or openai_api_key.strip() == ''):
-        flash('Para usar o Whisper, você precisa fornecer uma chave da API OpenAI.', 'error')
-        return redirect(url_for('settings'))
-    
     # Atualizar as configurações
     user_settings.update(
-        transcription_service=transcription_service,
-        openai_api_key=openai_api_key
+        transcription_service=transcription_service
     )
     
     flash('Configurações atualizadas com sucesso!', 'success')
     return redirect(url_for('settings'))
+
+@app.route('/settings/api')
+@login_required
+def settings_api():
+    """Página de configurações de API."""
+    user = get_current_user()
+    user_settings = UserSettings.get_by_user_id(user['user_id'])
+    
+    return render_template('settings/api.html', 
+                          user_settings=user_settings,
+                          active_tab='api')
+
+@app.route('/settings/update/api', methods=['POST'])
+@login_required
+def settings_update_api():
+    """Atualiza as configurações de API do usuário."""
+    user = get_current_user()
+    user_settings = UserSettings.get_by_user_id(user['user_id'])
+    
+    openai_api_key = request.form.get('openai_api_key')
+    
+    # Se escolheu whisper, verificar se tem a API key
+    if user_settings.transcription_service == 'whisper' and (not openai_api_key or openai_api_key.strip() == ''):
+        flash('Para usar o Whisper, você precisa fornecer uma chave da API OpenAI.', 'warning')
+    
+    # Atualizar as configurações
+    user_settings.update(
+        openai_api_key=openai_api_key
+    )
+    
+    flash('Configurações de API atualizadas com sucesso!', 'success')
+    return redirect(url_for('settings_api'))
 
 @app.route('/settings/prompts')
 @login_required
@@ -928,6 +951,23 @@ def settings_prompts():
                           user_settings=user_settings,
                           active_tab='prompts')
 
+@app.route('/settings/update/prompts', methods=['POST'])
+@login_required
+def settings_update_prompts():
+    """Atualiza as configurações de prompts do usuário."""
+    user = get_current_user()
+    user_settings = UserSettings.get_by_user_id(user['user_id'])
+    
+    custom_prompt = request.form.get('custom_prompt')
+    
+    # Atualizar as configurações
+    user_settings.update(
+        custom_prompt=custom_prompt
+    )
+    
+    flash('Configurações de prompts atualizadas com sucesso!', 'success')
+    return redirect(url_for('settings_prompts'))
+
 @app.route('/settings/models')
 @login_required
 def settings_models():
@@ -938,6 +978,28 @@ def settings_models():
     return render_template('settings/models.html', 
                           user_settings=user_settings,
                           active_tab='models')
+
+@app.route('/settings/update/models', methods=['POST'])
+@login_required
+def settings_update_models():
+    """Atualiza as configurações de modelos do usuário."""
+    user = get_current_user()
+    user_settings = UserSettings.get_by_user_id(user['user_id'])
+    
+    openai_model = request.form.get('openai_model')
+    
+    # Validar a opção de modelo
+    valid_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4o', 'gpt-4o-mini']
+    if openai_model not in valid_models:
+        openai_model = 'gpt-4o-mini'
+    
+    # Atualizar as configurações
+    user_settings.update(
+        openai_model=openai_model
+    )
+    
+    flash('Configurações de modelos atualizadas com sucesso!', 'success')
+    return redirect(url_for('settings_models'))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

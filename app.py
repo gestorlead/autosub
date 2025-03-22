@@ -9,6 +9,11 @@ import re
 from markupsafe import Markup
 import logging
 import traceback
+from logging.config import dictConfig
+import uuid
+import json
+from functools import wraps
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # Configurar o sistema de logs
 from src.utils.logging_config import *
@@ -19,6 +24,12 @@ from src.models.settings import UserSettings
 from src.utils import login_required, get_current_user, create_session, logout_user
 from src.utils.database import check_db_connection
 from src.utils.openai_helper import generate_social_media_post, correct_subtitles
+from src.migrations.setup_db import setup_database
+from src.migrations.add_is_admin_column import add_is_admin_column
+from src.migrations.user_settings import create_user_settings_table
+from src.migrations.update_user_settings import update_user_settings
+from src.migrations.update_user_settings_prompts import update_user_settings_prompts
+from src.migrations.add_language_columns import add_language_columns
 
 # Função para formatar timestamps para formato SRT
 def format_timestamp(seconds):
@@ -32,11 +43,6 @@ def format_timestamp(seconds):
     seconds = int(seconds)
     
     return f"{hours:02d}:{minutes:02d}:{seconds:02d},{milliseconds:03d}"
-
-# Importando a migração de configurações
-from src.migrations.user_settings import create_user_settings_table
-from src.migrations.update_user_settings import update_user_settings_table
-from src.migrations.update_user_settings_prompts import update_user_settings_prompts
 
 # Versão do aplicativo
 APP_VERSION = "1.1.4"
@@ -65,8 +71,9 @@ logger.info(f"Diretório de uploads configurado em: {UPLOAD_FOLDER}")
 
 # Criar tabelas se não existirem
 create_user_settings_table()
-update_user_settings_table()
+update_user_settings()
 update_user_settings_prompts()
+add_language_columns()
 
 # Filtro personalizado para converter quebras de linha em <br>
 @app.template_filter('nl2br')
@@ -85,7 +92,8 @@ def allowed_file(filename):
 @app.route('/')
 def index():
     """Página inicial."""
-    return render_template('index.html')
+    user = get_current_user()
+    return render_template('index.html', user=user)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():

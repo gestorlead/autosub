@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.1.4] - 2025-05-28
+
+### Melhorado
+- Aprimoramento do sistema de geração de legendas usando API Whisper
+- Implementação de sistema robusto de logs para melhor rastreamento de erros
+- Adição de campos para seleção de idiomas de origem e destino na interface de upload
+- Adição de campo para especificar o número de pessoas falando no vídeo
+- Suporte para diferentes combinações de idiomas na transcrição e tradução
+
 ## [1.1.3] - 2025-05-25
 
 ### Melhorias

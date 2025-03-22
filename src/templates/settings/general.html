@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Configurações - AutoSub{% endblock %}
+{% block title %}Configurações Gerais - AutoSub{% endblock %}
 
 {% block content %}
 <div class="row">
@@ -41,15 +41,6 @@
                         </select>
                         <div class="form-text">
                             O AutoSub usa o serviço nativo para transcrição. O Whisper usa a API da OpenAI para transcrições mais precisas.
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="openai_api_key" class="form-label">Chave da API OpenAI (para Whisper)</label>
-                        <input type="password" class="form-control" id="openai_api_key" name="openai_api_key" 
-                               value="{{ user_settings.openai_api_key if user_settings.openai_api_key else '' }}">
-                        <div class="form-text">
-                            Necessária apenas se você estiver usando o Whisper para transcrição.
                         </div>
                     </div>
                     

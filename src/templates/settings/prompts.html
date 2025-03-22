@@ -1,40 +1,90 @@
-{% extends 'base.html' %}
-
-{% block title %}Configurações de Prompts - AutoSub{% endblock %}
-
-{% block content %}
+{% extends 'base.html' %} {% block title %}Configurações de Prompts - AutoSub{%
+endblock %} {% block content %}
 <div class="row">
-    <div class="col-md-3">
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-primary text-white">
-                <i class="fas fa-cogs me-2"></i>Configurações
-            </div>
-            <div class="list-group list-group-flush">
-                <a href="{{ url_for('settings') }}" class="list-group-item list-group-item-action {% if active_tab == 'general' %}active{% endif %}">
-                    <i class="fas fa-sliders-h me-2"></i>Geral
-                </a>
-                <a href="{{ url_for('settings_prompts') }}" class="list-group-item list-group-item-action {% if active_tab == 'prompts' %}active{% endif %}">
-                    <i class="fas fa-comment-dots me-2"></i>Prompts
-                </a>
-                <a href="{{ url_for('settings_models') }}" class="list-group-item list-group-item-action {% if active_tab == 'models' %}active{% endif %}">
-                    <i class="fas fa-microchip me-2"></i>Modelos
-                </a>
-            </div>
-        </div>
+  <div class="col-md-3">
+    <div class="card shadow-sm mb-4">
+      <div class="card-header bg-primary text-white">
+        <i class="fas fa-cogs me-2"></i>Configurações
+      </div>
+      <div class="list-group list-group-flush">
+        <a
+          href="{{ url_for('settings') }}"
+          class="list-group-item list-group-item-action {% if active_tab == 'general' %}active{% endif %}"
+        >
+          <i class="fas fa-sliders-h me-2"></i>Geral
+        </a>
+        <a
+          href="{{ url_for('settings_prompts') }}"
+          class="list-group-item list-group-item-action {% if active_tab == 'prompts' %}active{% endif %}"
+        >
+          <i class="fas fa-comment-dots me-2"></i>Prompts
+        </a>
+        <a
+          href="{{ url_for('settings_models') }}"
+          class="list-group-item list-group-item-action {% if active_tab == 'models' %}active{% endif %}"
+        >
+          <i class="fas fa-microchip me-2"></i>Modelos
+        </a>
+      </div>
     </div>
-    
-    <div class="col-md-9">
-        <div class="card shadow-sm">
-            <div class="card-header bg-primary text-white">
-                <i class="fas fa-comment-dots me-2"></i>Configurações de Prompts
+  </div>
+
+  <div class="col-md-9">
+    <div class="card shadow-sm">
+      <div class="card-header bg-primary text-white">
+        <i class="fas fa-comment-dots me-2"></i>Configurações de Prompts
+      </div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('settings_update_prompts') }}">
+          <div class="mb-3">
+            <label for="custom_prompt" class="form-label"
+              >Prompt Personalizado</label
+            >
+            <textarea
+              class="form-control"
+              id="custom_prompt"
+              name="custom_prompt"
+              rows="6"
+            >
+{{ user_settings.custom_prompt if user_settings.custom_prompt else '' }}</textarea
+            >
+            <div class="form-text">
+              Use um prompt personalizado para orientar a geração e tradução de
+              legendas.
+              <br />Deixe em branco para usar o prompt padrão do sistema.
             </div>
-            <div class="card-body">
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Esta funcionalidade será implementada em breve. Aqui você poderá configurar os prompts personalizados para geração de legendas.
-                </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Sugestões de Prompts</label>
+            <div class="card">
+              <div class="card-body">
+                <h6>Prompt para Tradução Formal</h6>
+                <pre class="border p-2 bg-light">
+Traduza o seguinte texto mantendo um tom formal e profissional. Preserve todos os termos técnicos no idioma original quando apropriado.</pre
+                >
+
+                <h6 class="mt-3">Prompt para Tradução Coloquial</h6>
+                <pre class="border p-2 bg-light">
+Traduza o texto para um tom coloquial e natural, como seria falado no dia a dia. Adapte expressões idiomáticas para equivalentes culturais apropriados.</pre
+                >
+
+                <h6 class="mt-3">Prompt para Legendas Educacionais</h6>
+                <pre class="border p-2 bg-light">
+Traduza o texto com foco em clareza e precisão para fins educacionais. Simplifique conceitos complexos quando necessário, mas mantenha a precisão técnica.</pre
+                >
+              </div>
             </div>
-        </div>
+          </div>
+
+          <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save me-2"></i>Salvar Configurações
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
+  </div>
 </div>
-{% endblock %} 
+{% endblock %}

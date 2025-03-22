@@ -35,6 +35,7 @@ def format_timestamp(seconds):
 
 # Importando a migração de configurações
 from src.migrations.user_settings import create_user_settings_table
+from src.migrations.update_user_settings import update_user_settings_table
 
 # Versão do aplicativo
 APP_VERSION = "1.1.4"
@@ -63,6 +64,7 @@ logger.info(f"Diretório de uploads configurado em: {UPLOAD_FOLDER}")
 
 # Criar tabelas se não existirem
 create_user_settings_table()
+update_user_settings_table()
 
 # Filtro personalizado para converter quebras de linha em <br>
 @app.template_filter('nl2br')

@@ -2,6 +2,7 @@ version: '3'
 
 services:
   app:
+    container_name: autosub_app
     build: .
     restart: unless-stopped
     ports:
@@ -19,6 +20,7 @@ services:
       - db
 
   db:
+    container_name: autosub_db
     image: postgres:13
     restart: unless-stopped
     environment:

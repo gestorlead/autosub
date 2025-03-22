@@ -32,6 +32,53 @@
                         <div class="form-text">Se não informado, o nome do arquivo será usado como título.</div>
                     </div>
                     
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="source_language" class="form-label">Idioma Original</label>
+                            <select class="form-select" id="source_language" name="source_language" required>
+                                <option value="en" selected>Inglês</option>
+                                <option value="pt">Português</option>
+                                <option value="es">Espanhol</option>
+                                <option value="fr">Francês</option>
+                                <option value="de">Alemão</option>
+                                <option value="it">Italiano</option>
+                                <option value="ja">Japonês</option>
+                                <option value="ko">Coreano</option>
+                                <option value="zh">Chinês</option>
+                            </select>
+                            <div class="form-text">Idioma falado no vídeo</div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="target_language" class="form-label">Idioma da Tradução</label>
+                            <select class="form-select" id="target_language" name="target_language" required>
+                                <option value="pt" selected>Português</option>
+                                <option value="en">Inglês</option>
+                                <option value="es">Espanhol</option>
+                                <option value="fr">Francês</option>
+                                <option value="de">Alemão</option>
+                                <option value="it">Italiano</option>
+                                <option value="ja">Japonês</option>
+                                <option value="ko">Coreano</option>
+                                <option value="zh">Chinês</option>
+                            </select>
+                            <div class="form-text">Idioma para tradução das legendas</div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="num_speakers" class="form-label">Número de Personagens</label>
+                            <select class="form-select" id="num_speakers" name="num_speakers">
+                                <option value="0" selected>Auto-detectar</option>
+                                <option value="1">1 personagem</option>
+                                <option value="2">2 personagens</option>
+                                <option value="3">3 personagens</option>
+                                <option value="4">4 personagens</option>
+                                <option value="5">5+ personagens</option>
+                            </select>
+                            <div class="form-text">Ajuda na identificação das vozes</div>
+                        </div>
+                    </div>
+                    
                     <div class="mb-3">
                         <label for="description" class="form-label">Transcrição manual (opcional)</label>
                         <textarea class="form-control" id="description" name="description" rows="3"></textarea>
@@ -63,6 +110,53 @@
                         <label for="url-title" class="form-label">Título (opcional)</label>
                         <input type="text" class="form-control" id="url-title" name="title">
                         <div class="form-text">Se não informado, "Vídeo de URL" será usado como título.</div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="url-source_language" class="form-label">Idioma Original</label>
+                            <select class="form-select" id="url-source_language" name="source_language" required>
+                                <option value="en" selected>Inglês</option>
+                                <option value="pt">Português</option>
+                                <option value="es">Espanhol</option>
+                                <option value="fr">Francês</option>
+                                <option value="de">Alemão</option>
+                                <option value="it">Italiano</option>
+                                <option value="ja">Japonês</option>
+                                <option value="ko">Coreano</option>
+                                <option value="zh">Chinês</option>
+                            </select>
+                            <div class="form-text">Idioma falado no vídeo</div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="url-target_language" class="form-label">Idioma da Tradução</label>
+                            <select class="form-select" id="url-target_language" name="target_language" required>
+                                <option value="pt" selected>Português</option>
+                                <option value="en">Inglês</option>
+                                <option value="es">Espanhol</option>
+                                <option value="fr">Francês</option>
+                                <option value="de">Alemão</option>
+                                <option value="it">Italiano</option>
+                                <option value="ja">Japonês</option>
+                                <option value="ko">Coreano</option>
+                                <option value="zh">Chinês</option>
+                            </select>
+                            <div class="form-text">Idioma para tradução das legendas</div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="url-num_speakers" class="form-label">Número de Personagens</label>
+                            <select class="form-select" id="url-num_speakers" name="num_speakers">
+                                <option value="0" selected>Auto-detectar</option>
+                                <option value="1">1 personagem</option>
+                                <option value="2">2 personagens</option>
+                                <option value="3">3 personagens</option>
+                                <option value="4">4 personagens</option>
+                                <option value="5">5+ personagens</option>
+                            </select>
+                            <div class="form-text">Ajuda na identificação das vozes</div>
+                        </div>
                     </div>
                     
                     <div class="mb-3">
@@ -100,7 +194,7 @@
         <ul class="mb-0">
             <li>Após o envio, o vídeo será processado automaticamente.</li>
             <li>O tempo de processamento depende do tamanho e duração do vídeo.</li>
-            <li>Você receberá legendas em inglês e português.</li>
+            <li>As legendas serão geradas usando IA (OpenAI Whisper) no idioma original e traduzidas para o idioma selecionado.</li>
             <li>O processamento ocorre em segundo plano; você pode verificar o status na página "Meus Vídeos".</li>
         </ul>
     </div>

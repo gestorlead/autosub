@@ -5,7 +5,7 @@ from src.utils.database import execute_query
 class Video:
     def __init__(self, id=None, user_id=None, title=None, description=None, original_filename=None, 
                  video_url=None, is_file=True, storage_path=None, status="pending", 
-                 created_at=None, updated_at=None):
+                 created_at=None, updated_at=None, source_language='en', target_language='pt', num_speakers=0):
         self.id = id
         self.user_id = user_id
         self.title = title
@@ -17,6 +17,9 @@ class Video:
         self.status = status
         self.created_at = created_at
         self.updated_at = updated_at
+        self.source_language = source_language
+        self.target_language = target_language
+        self.num_speakers = num_speakers
     
     @staticmethod
     def get_by_id(video_id):
@@ -36,7 +39,10 @@ class Video:
                 storage_path=result['storage_path'],
                 status=result['status'],
                 created_at=result['created_at'],
-                updated_at=result['updated_at']
+                updated_at=result['updated_at'],
+                source_language=result.get('source_language', 'en'),
+                target_language=result.get('target_language', 'pt'),
+                num_speakers=result.get('num_speakers', 0)
             )
         return None
     
@@ -65,23 +71,29 @@ class Video:
                 storage_path=result['storage_path'],
                 status=result['status'],
                 created_at=result['created_at'],
-                updated_at=result['updated_at']
+                updated_at=result['updated_at'],
+                source_language=result.get('source_language', 'en'),
+                target_language=result.get('target_language', 'pt'),
+                num_speakers=result.get('num_speakers', 0)
             ))
         
         return videos
     
     @staticmethod
-    def create_from_file(user_id, title, file_path, original_filename, description=None):
+    def create_from_file(user_id, title, file_path, original_filename, description=None, 
+                         source_language='en', target_language='pt', num_speakers=0):
         """Cria um novo vídeo a partir de um arquivo."""
         query = """
         INSERT INTO videos 
-        (user_id, title, description, original_filename, is_file, storage_path, status)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        (user_id, title, description, original_filename, is_file, storage_path, status, 
+         source_language, target_language, num_speakers)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING id;
         """
         result = execute_query(
             query, 
-            params=(user_id, title, description, original_filename, True, file_path, 'pending'),
+            params=(user_id, title, description, original_filename, True, file_path, 'pending', 
+                   source_language, target_language, num_speakers),
             fetchone=True
         )
         
@@ -90,17 +102,20 @@ class Video:
         return None
     
     @staticmethod
-    def create_from_url(user_id, title, video_url, description=None):
+    def create_from_url(user_id, title, video_url, description=None, 
+                        source_language='en', target_language='pt', num_speakers=0):
         """Cria um novo vídeo a partir de uma URL."""
         query = """
         INSERT INTO videos 
-        (user_id, title, description, video_url, is_file, status)
-        VALUES (%s, %s, %s, %s, %s, %s)
+        (user_id, title, description, video_url, is_file, status, 
+         source_language, target_language, num_speakers)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING id;
         """
         result = execute_query(
             query, 
-            params=(user_id, title, description, video_url, False, 'pending'),
+            params=(user_id, title, description, video_url, False, 'pending', 
+                   source_language, target_language, num_speakers),
             fetchone=True
         )
         

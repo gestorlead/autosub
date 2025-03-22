@@ -24,12 +24,7 @@ from src.models.settings import UserSettings
 from src.utils import login_required, get_current_user, create_session, logout_user
 from src.utils.database import check_db_connection
 from src.utils.openai_helper import generate_social_media_post, correct_subtitles
-from src.migrations.setup_db import setup_database
-from src.migrations.add_is_admin_column import add_is_admin_column
-from src.migrations.user_settings import create_user_settings_table
-from src.migrations.update_user_settings import update_user_settings
-from src.migrations.update_user_settings_prompts import update_user_settings_prompts
-from src.migrations.add_language_columns import add_language_columns
+from src.migrations.migrations import run_all_migrations
 
 # Função para formatar timestamps para formato SRT
 def format_timestamp(seconds):
@@ -69,11 +64,8 @@ bootstrap = Bootstrap5(app)
 logger.info(f"Iniciando AutoSub versão {APP_VERSION}")
 logger.info(f"Diretório de uploads configurado em: {UPLOAD_FOLDER}")
 
-# Criar tabelas se não existirem
-create_user_settings_table()
-update_user_settings()
-update_user_settings_prompts()
-add_language_columns()
+# Executa todas as migrações necessárias
+run_all_migrations()
 
 # Filtro personalizado para converter quebras de linha em <br>
 @app.template_filter('nl2br')

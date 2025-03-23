@@ -23,6 +23,10 @@ services:
       - DB_PASSWORD=postgres
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
+      - ADMIN_USERNAME=${ADMIN_USERNAME}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+      - SALT=${SALT}
     depends_on:
       - db
 

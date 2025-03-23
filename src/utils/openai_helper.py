@@ -9,7 +9,8 @@ dotenv.load_dotenv('.env', override=True)
 if os.path.exists('.env.dev'):
     dotenv.load_dotenv('.env.dev', override=True)
 
-# Obter as chaves da API da variável de ambiente
+# Obter as chaves da API da variável de ambiente (referência para desenvolvimento)
+# Estas chaves serão usadas como fallback quando não houver chave definida para um usuário
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
 
@@ -17,27 +18,60 @@ GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-# Usar Groq por padrão se a chave estiver disponível
-USE_GROQ = GROQ_API_KEY is not None and GROQ_API_KEY != ""
+# Modelo padrão para quando não houver configuração específica
+DEFAULT_MODEL = "gpt-4o-mini"
 
-# Verificar qual API estamos usando
-if USE_GROQ:
-    print(f"DEBUG: Usando API do Groq", file=sys.stderr)
-    API_KEY = GROQ_API_KEY
-    API_URL = GROQ_API_URL
-    MODEL = "llama3-70b-8192"  # Modelo compatível com Groq
-else:
-    # Verificar se a chave OpenAI está definida e exibir feedback
-    if OPENAI_API_KEY:
-        print(f"DEBUG: Usando API da OpenAI", file=sys.stderr)
-        API_KEY = OPENAI_API_KEY
-        API_URL = OPENAI_API_URL
-        MODEL = "gpt-4o-mini"
+def get_api_config(user_id=None):
+    """
+    Obtém a configuração da API para um usuário específico.
+    
+    Args:
+        user_id (int, optional): ID do usuário para obter configurações personalizadas.
+        
+    Returns:
+        tuple: (api_key, api_url, model) configurados para o usuário ou valores padrão.
+    """
+    # Valores padrão (fallback)
+    api_key = OPENAI_API_KEY
+    api_url = OPENAI_API_URL
+    model = DEFAULT_MODEL
+    
+    # Se GROQ estiver disponível e não houver user_id, usar GROQ como padrão
+    if not user_id and GROQ_API_KEY and GROQ_API_KEY != "":
+        print(f"DEBUG: Usando API do Groq (padrão)", file=sys.stderr)
+        api_key = GROQ_API_KEY
+        api_url = GROQ_API_URL
+        model = "llama3-70b-8192"  # Modelo compatível com Groq
+        return api_key, api_url, model
+    
+    # Tentar obter configurações do usuário
+    if user_id:
+        try:
+            from src.models.settings import UserSettings
+            user_settings = UserSettings.get_by_user_id(user_id)
+            
+            # Se o usuário tem uma chave API configurada, usá-la
+            if user_settings.openai_api_key and user_settings.openai_api_key.strip():
+                print(f"DEBUG: Usando chave API do usuário {user_id}", file=sys.stderr)
+                api_key = user_settings.openai_api_key
+                api_url = OPENAI_API_URL  # Sempre OpenAI para chaves de usuário
+            
+            # Se o usuário tem um modelo configurado, usá-lo
+            if user_settings.openai_model and user_settings.openai_model.strip():
+                model = user_settings.openai_model
+                
+        except Exception as e:
+            print(f"DEBUG: Erro ao obter configurações do usuário: {str(e)}", file=sys.stderr)
+            # Continua com os valores padrão em caso de erro
+    
+    # Se não há chave API configurada (nem do usuário, nem do sistema)
+    if not api_key:
+        print("AVISO: Nenhuma chave API configurada. A geração de texto não funcionará.", file=sys.stderr)
     else:
-        print("AVISO: Nenhuma chave de API configurada. A geração de texto não funcionará.", file=sys.stderr)
-        API_KEY = ""
-        API_URL = OPENAI_API_URL
-        MODEL = "gpt-4o-mini"
+        url_name = "OpenAI" if api_url == OPENAI_API_URL else "Groq"
+        print(f"DEBUG: Usando API {url_name} com modelo {model}", file=sys.stderr)
+    
+    return api_key, api_url, model
 
 def generate_social_media_post(transcript, platform="instagram", user_id=None):
     """
@@ -51,12 +85,14 @@ def generate_social_media_post(transcript, platform="instagram", user_id=None):
     Returns:
         str: Texto formatado para publicação.
     """
-    if not API_KEY:
-        return "Erro: Chave da API não configurada."
+    # Obter configurações de API para o usuário
+    api_key, api_url, model = get_api_config(user_id)
+    
+    if not api_key:
+        return "Erro: Chave da API não configurada. Configure sua chave API nas configurações."
     
     # Tentar obter prompts personalizados se o user_id for fornecido
     custom_prompt = None
-    user_settings = None
     
     if user_id:
         try:
@@ -106,15 +142,10 @@ def generate_social_media_post(transcript, platform="instagram", user_id=None):
             - Ter um tom profissional, mas amigável e encorajador para estudantes de inglês
             """
     
-    # Use o modelo configurado pelo usuário, se disponível
-    model = MODEL
-    if user_settings and hasattr(user_settings, 'openai_model') and user_settings.openai_model:
-        model = user_settings.openai_model
-    
     # Configuração da requisição para a API
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {API_KEY}"
+        "Authorization": f"Bearer {api_key}"
     }
     
     data = {
@@ -128,8 +159,8 @@ def generate_social_media_post(transcript, platform="instagram", user_id=None):
     }
     
     try:
-        print(f"DEBUG: Enviando requisição para API... ({API_URL})", file=sys.stderr)
-        response = requests.post(API_URL, headers=headers, data=json.dumps(data), timeout=30)
+        print(f"DEBUG: Enviando requisição para API... ({api_url})", file=sys.stderr)
+        response = requests.post(api_url, headers=headers, data=json.dumps(data), timeout=30)
         print(f"DEBUG: Resposta recebida! Status: {response.status_code}", file=sys.stderr)
         
         if response.status_code != 200:
@@ -149,19 +180,23 @@ def generate_social_media_post(transcript, platform="instagram", user_id=None):
         print(f"DEBUG: Erro na chamada à API: {str(e)}", file=sys.stderr)
         return f"Erro ao gerar texto: {str(e)}"
 
-def correct_subtitles(autosub_transcript, manual_transcript):
+def correct_subtitles(autosub_transcript, manual_transcript, user_id=None):
     """
     Envia para a API a transcrição do autosub e a transcrição manual para corrigir inconsistências.
     
     Args:
         autosub_transcript (str): Transcrição gerada pelo autosub.
         manual_transcript (str): Transcrição manual fornecida pelo usuário.
+        user_id (int, optional): ID do usuário para obter configurações personalizadas.
         
     Returns:
         str: Transcrição corrigida no formato SRT.
     """
-    if not API_KEY:
-        return "Erro: Chave da API não configurada."
+    # Obter configurações de API para o usuário
+    api_key, api_url, model = get_api_config(user_id)
+    
+    if not api_key:
+        return "Erro: Chave da API não configurada. Configure sua chave API nas configurações."
     
     # Verifica se a transcrição é em inglês ou português
     is_english = True
@@ -220,11 +255,11 @@ def correct_subtitles(autosub_transcript, manual_transcript):
     # Configuração da requisição para a API
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {API_KEY}"
+        "Authorization": f"Bearer {api_key}"
     }
     
     data = {
-        "model": MODEL,
+        "model": model,
         "messages": [
             {"role": "system", "content": "Você é um especialista em legendagem de vídeos educativos para ensino de inglês, com ampla experiência em transcrição de diálogos e tradução português-inglês. Sua principal responsabilidade é preservar os timestamps originais e manter o formato SRT intacto, alterando APENAS o texto das legendas. IMPORTANTE: Retorne SOMENTE o conteúdo SRT, sem explicações adicionais."},
             {"role": "user", "content": prompt}
@@ -234,8 +269,8 @@ def correct_subtitles(autosub_transcript, manual_transcript):
     }
     
     try:
-        print(f"DEBUG: Enviando requisição para corrigir legendas... ({API_URL})", file=sys.stderr)
-        response = requests.post(API_URL, headers=headers, data=json.dumps(data), timeout=45)
+        print(f"DEBUG: Enviando requisição para corrigir legendas... ({api_url})", file=sys.stderr)
+        response = requests.post(api_url, headers=headers, data=json.dumps(data), timeout=45)
         print(f"DEBUG: Resposta recebida para correção! Status: {response.status_code}", file=sys.stderr)
         
         if response.status_code != 200:

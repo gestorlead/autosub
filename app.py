@@ -635,7 +635,7 @@ def correct_video_subtitles(video_id):
     en_content = en_subtitle.get_content()
     
     # Primeiro, corrigir a legenda em inglês usando a transcrição manual
-    corrected_en = correct_subtitles(en_content, video.description)
+    corrected_en = correct_subtitles(en_content, video.description, user['user_id'])
     
     # Atualizar o arquivo SRT em inglês
     en_updated = False
@@ -652,7 +652,7 @@ def correct_video_subtitles(video_id):
         pt_content = pt_subtitle.get_content()
         
         # Usar a legenda em inglês corrigida como referência para a legenda em português
-        corrected_pt = correct_subtitles(pt_content, corrected_en)
+        corrected_pt = correct_subtitles(pt_content, corrected_en, user['user_id'])
         
         if corrected_pt and not corrected_pt.startswith('Erro'):
             pt_subtitle.update_content(corrected_pt)

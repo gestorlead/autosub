@@ -85,16 +85,17 @@ def setup_database():
             """)
             
             # Cria um usuário padrão
-            from werkzeug.security import generate_password_hash
-            salt = os.environ.get('SALT', 'autosub_salt')
+            from src.utils.auth import hash_password
+            admin_username = os.environ.get('ADMIN_USERNAME', 'admin')
             admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
+            admin_email = os.environ.get('ADMIN_EMAIL', 'admin@example.com')
             
-            password_hash = generate_password_hash(f"{admin_password}{salt}")
+            password_hash = hash_password(admin_password)
             
             cursor.execute("""
             INSERT INTO users (username, password_hash, email, full_name, is_active)
             VALUES (%s, %s, %s, %s, %s);
-            """, ('admin', password_hash, 'admin@example.com', 'Administrador', True))
+            """, (admin_username, password_hash, admin_email, 'Administrador', True))
             
             logger.info("Banco de dados inicializado com sucesso!")
         else:
@@ -405,6 +406,42 @@ def fix_password_column():
         logger.error(f"Erro ao corrigir coluna de senha: {str(e)}")
         print(f"Erro ao corrigir coluna de senha: {str(e)}")
 
+def fix_admin_password():
+    """
+    Atualiza a senha do usuário admin usando o algoritmo correto.
+    """
+    try:
+        admin_username = os.environ.get('ADMIN_USERNAME', 'admin')
+        admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
+        
+        # Verifica se o usuário admin existe
+        user_exists = execute_query("""
+            SELECT id FROM users WHERE username = %s
+        """, params=(admin_username,), fetchone=True)
+        
+        if not user_exists:
+            print(f"Usuário {admin_username} não encontrado. Pulando correção de senha.")
+            return
+            
+        # Importa a função correta para hash de senha
+        from src.utils.auth import hash_password
+        
+        # Gera o hash da senha usando o algoritmo correto
+        password_hash = hash_password(admin_password)
+        
+        # Atualiza a senha do usuário admin
+        execute_query("""
+            UPDATE users 
+            SET password_hash = %s 
+            WHERE username = %s
+        """, params=(password_hash, admin_username))
+        
+        print(f"Senha do usuário {admin_username} atualizada com sucesso!")
+            
+    except Exception as e:
+        logger.error(f"Erro ao corrigir senha do admin: {str(e)}")
+        print(f"Erro ao corrigir senha do admin: {str(e)}")
+
 def run_all_migrations():
     """
     Executa todas as migrações em ordem.
@@ -416,6 +453,9 @@ def run_all_migrations():
     
     # Corrigir nome da coluna de senha
     fix_password_column()
+    
+    # Corrigir senha do admin
+    fix_admin_password()
     
     # Adicionar coluna is_admin
     add_is_admin_column()

@@ -24,6 +24,7 @@ from src.models.settings import UserSettings
 from src.utils import login_required, get_current_user, create_session, logout_user
 from src.utils.database import check_db_connection
 from src.utils.openai_helper import generate_social_media_post, correct_subtitles
+from src.utils.google_translate import translate_text
 from src.migrations.migrations import run_all_migrations
 
 # Função para formatar timestamps para formato SRT
@@ -49,7 +50,6 @@ load_dotenv()
 UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', '/app/uploads')
 ALLOWED_EXTENSIONS = set(os.environ.get('ALLOWED_EXTENSIONS', 'mp4,mov,avi,mkv').split(','))
 SECRET_KEY = os.environ.get('FLASK_SECRET_KEY', 'sua_chave_secreta')
-GOOGLE_API_KEY = os.environ.get('GOOGLE_TRANSLATE_API_KEY', '')
 
 # Cria e configura a aplicação Flask
 app = Flask(__name__, 
@@ -558,16 +558,30 @@ def process_video(video_id):
                     current_block += 1
                     logger.info(f"[INFO] Traduzindo bloco {current_block}/{total_blocks} (ID: {idx})")
                     try:
-                        response = client.chat.completions.create(
-                            model="gpt-3.5-turbo",
-                            messages=[
-                                {"role": "system", "content": f"Traduza o seguinte texto de {video.source_language} para {video.target_language}. Mantenha o mesmo formato e não adicione informações extras."},
-                                {"role": "user", "content": text}
-                            ]
+                        # Usar a API do Google Translate com a chave do usuário
+                        translation_result = translate_text(
+                            text=text,
+                            source_lang=video.source_language,
+                            target_lang=video.target_language,
+                            user_id=video.user_id
                         )
                         
-                        translated_text = response.choices[0].message.content.strip()
-                        logger.info(f"[INFO] Bloco {idx} traduzido com sucesso")
+                        if translation_result["success"]:
+                            translated_text = translation_result["translated_text"]
+                            logger.info(f"[INFO] Bloco {idx} traduzido com sucesso usando Google Translate")
+                        else:
+                            # Fallback para OpenAI em caso de erro com Google Translate
+                            logger.warning(f"[AVISO] Erro na tradução com Google Translate: {translation_result['error']}. Tentando com OpenAI...")
+                            response = client.chat.completions.create(
+                                model="gpt-3.5-turbo",
+                                messages=[
+                                    {"role": "system", "content": f"Traduza o seguinte texto de {video.source_language} para {video.target_language}. Mantenha o mesmo formato e não adicione informações extras."},
+                                    {"role": "user", "content": text}
+                                ]
+                            )
+                            
+                            translated_text = response.choices[0].message.content.strip()
+                            logger.info(f"[INFO] Bloco {idx} traduzido com sucesso usando OpenAI (fallback)")
                         
                         # Adicionar o bloco traduzido
                         translated_parts.append((idx, time_code, translated_text))
@@ -965,6 +979,7 @@ def settings_update_api():
     user_settings = UserSettings.get_by_user_id(user['user_id'])
     
     openai_api_key = request.form.get('openai_api_key')
+    google_translate_api_key = request.form.get('google_translate_api_key')
     
     # Se escolheu whisper, verificar se tem a API key
     if user_settings.transcription_service == 'whisper' and (not openai_api_key or openai_api_key.strip() == ''):
@@ -972,7 +987,8 @@ def settings_update_api():
     
     # Atualizar as configurações
     user_settings.update(
-        openai_api_key=openai_api_key
+        openai_api_key=openai_api_key,
+        google_translate_api_key=google_translate_api_key
     )
     
     flash('Configurações de API atualizadas com sucesso!', 'success')

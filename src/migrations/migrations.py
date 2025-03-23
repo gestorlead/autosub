@@ -442,37 +442,83 @@ def fix_admin_password():
         logger.error(f"Erro ao corrigir senha do admin: {str(e)}")
         print(f"Erro ao corrigir senha do admin: {str(e)}")
 
+def add_google_translate_api_key_column():
+    """
+    Adiciona a coluna google_translate_api_key na tabela user_settings.
+    """
+    try:
+        # Verificar se a tabela user_settings existe
+        table_exists = execute_query("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'user_settings'
+            );
+        """, fetchone=True)
+        
+        if not table_exists or not table_exists[0]:
+            print("A tabela user_settings não existe. Pulando adição da coluna google_translate_api_key.")
+            return
+            
+        # Verificar se a coluna google_translate_api_key já existe
+        column_exists = execute_query("""
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name = 'user_settings' AND column_name = 'google_translate_api_key'
+        """, fetchone=True)
+        
+        if not column_exists:
+            print("Adicionando coluna google_translate_api_key à tabela user_settings...")
+            execute_query("""
+                ALTER TABLE user_settings 
+                ADD COLUMN google_translate_api_key VARCHAR(255) DEFAULT NULL
+            """)
+            print("Coluna google_translate_api_key adicionada com sucesso.")
+        else:
+            print("A coluna google_translate_api_key já existe. Pulando...")
+        
+    except Exception as e:
+        logger.error(f"Erro ao adicionar coluna google_translate_api_key: {str(e)}")
+        print(f"Erro ao adicionar coluna google_translate_api_key: {str(e)}")
+
 def run_all_migrations():
     """
-    Executa todas as migrações em ordem.
+    Executa todas as migrações necessárias para a aplicação.
     """
-    print("Iniciando processo de migração do banco de dados...")
-    
-    # Configuração inicial do banco
-    setup_database()
-    
-    # Corrigir nome da coluna de senha
-    fix_password_column()
-    
-    # Corrigir senha do admin
-    fix_admin_password()
-    
-    # Adicionar coluna is_admin
-    add_is_admin_column()
-    
-    # Criar tabela de configurações de usuário
-    create_user_settings_table()
-    
-    # Atualizar configurações
-    update_user_settings()
-    
-    # Atualizar prompts
-    update_user_settings_prompts()
-    
-    # Adicionar colunas de idioma
-    add_language_columns()
-    
-    print("Todas as migrações foram concluídas com sucesso!")
+    try:
+        logger.info("Iniciando execução de migrações...")
+        
+        # Configuração inicial do banco de dados
+        setup_database()
+        
+        # Migrações específicas
+        add_updated_at_column()
+        add_language_columns()
+        fix_password_column()
+        
+        # Corrigir senha do admin
+        fix_admin_password()
+        
+        # Adicionar coluna is_admin
+        add_is_admin_column()
+        
+        # Migração para configurações de usuário
+        create_user_settings_table()
+        
+        # Atualizar configurações
+        update_user_settings()
+        
+        # Atualizar prompts
+        update_user_settings_prompts()
+        
+        # Adicionar colunas específicas de configuração
+        add_openai_model_column()
+        add_social_media_prompts_columns()
+        add_google_translate_api_key_column()
+        
+        logger.info("Todas as migrações foram executadas com sucesso!")
+    except Exception as e:
+        logger.error(f"Erro durante a execução das migrações: {str(e)}")
+        raise
 
 if __name__ == "__main__":
     run_all_migrations() 

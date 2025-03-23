@@ -49,7 +49,7 @@ endblock %} {% block content %}
             textos para redes sociais.
           </div>
 
-          <div class="mb-3">
+          <div class="mb-4">
             <label for="openai_api_key" class="form-label"
               >Chave API da OpenAI</label
             >
@@ -65,9 +65,9 @@ endblock %} {% block content %}
               <button
                 class="btn btn-outline-secondary"
                 type="button"
-                onclick="togglePasswordVisibility()"
+                onclick="togglePasswordVisibility('openai_api_key', 'toggle-icon-openai')"
               >
-                <i class="fa fa-eye" id="toggle-icon"></i>
+                <i class="fa fa-eye" id="toggle-icon-openai"></i>
               </button>
             </div>
             <div class="form-text">
@@ -77,11 +77,49 @@ endblock %} {% block content %}
             </div>
           </div>
 
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            A chave de API do Google Translate pode ser utilizada para tradução
+            de legendas entre idiomas diferentes com alta qualidade.
+          </div>
+
+          <div class="mb-3">
+            <label for="google_translate_api_key" class="form-label"
+              >Chave API do Google Translate</label
+            >
+            <div class="input-group">
+              <input
+                type="password"
+                class="form-control"
+                id="google_translate_api_key"
+                name="google_translate_api_key"
+                value="{{ user_settings.google_translate_api_key if user_settings.google_translate_api_key else '' }}"
+                placeholder="Insira sua chave API do Google Translate"
+              />
+              <button
+                class="btn btn-outline-secondary"
+                type="button"
+                onclick="togglePasswordVisibility('google_translate_api_key', 'toggle-icon-google')"
+              >
+                <i class="fa fa-eye" id="toggle-icon-google"></i>
+              </button>
+            </div>
+            <div class="form-text">
+              <a
+                href="https://console.cloud.google.com/apis/credentials"
+                target="_blank"
+              >
+                <i class="fas fa-external-link-alt me-1"></i>Obter chave API do
+                Google Cloud
+              </a>
+            </div>
+          </div>
+
           <div class="alert alert-warning mt-3">
             <i class="fas fa-lock me-2"></i>
-            <strong>Importante:</strong> Sua chave API é armazenada de forma
-            segura e será usada apenas para processar seus próprios vídeos.
-            Nunca compartilhamos sua chave com terceiros.
+            <strong>Importante:</strong> Suas chaves de API são armazenadas de
+            forma segura e serão usadas apenas para processar seus próprios
+            vídeos. Nunca compartilhamos suas chaves com terceiros.
           </div>
 
           <div class="d-grid gap-2 d-md-flex justify-content-md-end">
@@ -96,9 +134,9 @@ endblock %} {% block content %}
 </div>
 
 <script>
-  function togglePasswordVisibility() {
-    const passwordInput = document.getElementById("openai_api_key");
-    const icon = document.getElementById("toggle-icon");
+  function togglePasswordVisibility(inputId, iconId) {
+    const passwordInput = document.getElementById(inputId);
+    const icon = document.getElementById(iconId);
 
     if (passwordInput.type === "password") {
       passwordInput.type = "text";

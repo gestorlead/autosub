@@ -5,93 +5,139 @@ import sys
 import dotenv
 
 # Carregar variáveis de ambiente dos arquivos .env ou .env.dev se existirem
+# Usado apenas para outras configurações, não para chaves API
 dotenv.load_dotenv('.env', override=True)
 if os.path.exists('.env.dev'):
     dotenv.load_dotenv('.env.dev', override=True)
-
-# Obter as chaves da API da variável de ambiente
-OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
-GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
 
 # URLs das APIs
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-# Usar Groq por padrão se a chave estiver disponível
-USE_GROQ = GROQ_API_KEY is not None and GROQ_API_KEY != ""
+# Modelo padrão para quando não houver configuração específica
+DEFAULT_MODEL = "gpt-4o-mini"
 
-# Verificar qual API estamos usando
-if USE_GROQ:
-    print(f"DEBUG: Usando API do Groq", file=sys.stderr)
-    API_KEY = GROQ_API_KEY
-    API_URL = GROQ_API_URL
-    MODEL = "llama3-70b-8192"  # Modelo compatível com Groq
-else:
-    # Verificar se a chave OpenAI está definida e exibir feedback
-    if OPENAI_API_KEY:
-        print(f"DEBUG: Usando API da OpenAI", file=sys.stderr)
-        API_KEY = OPENAI_API_KEY
-        API_URL = OPENAI_API_URL
-        MODEL = "gpt-4o-mini"
+def get_api_config(user_id=None):
+    """
+    Obtém a configuração da API para um usuário específico.
+    
+    Args:
+        user_id (int, optional): ID do usuário para obter configurações personalizadas.
+        
+    Returns:
+        tuple: (api_key, api_url, model) configurados para o usuário ou valores padrão.
+    """
+    # Valores padrão (iniciais)
+    api_key = None
+    api_url = OPENAI_API_URL
+    model = DEFAULT_MODEL
+    
+    # Tentar obter configurações do usuário
+    if user_id:
+        try:
+            from src.models.settings import UserSettings
+            user_settings = UserSettings.get_by_user_id(user_id)
+            
+            # Se o usuário tem uma chave API configurada, usá-la
+            if user_settings.openai_api_key and user_settings.openai_api_key.strip():
+                print(f"DEBUG: Usando chave API do usuário {user_id}", file=sys.stderr)
+                api_key = user_settings.openai_api_key
+                api_url = OPENAI_API_URL  # Sempre OpenAI para chaves de usuário
+            
+            # Se o usuário tem um modelo configurado, usá-lo
+            if user_settings.openai_model and user_settings.openai_model.strip():
+                model = user_settings.openai_model
+                
+        except Exception as e:
+            print(f"DEBUG: Erro ao obter configurações do usuário: {str(e)}", file=sys.stderr)
+            # Continua com os valores padrão em caso de erro
+    
+    # Se não há chave API configurada
+    if not api_key:
+        print("AVISO: Nenhuma chave API configurada para o usuário. A geração de texto não funcionará.", file=sys.stderr)
     else:
-        print("AVISO: Nenhuma chave de API configurada. A geração de texto não funcionará.", file=sys.stderr)
-        API_KEY = ""
-        API_URL = OPENAI_API_URL
-        MODEL = "gpt-4o-mini"
+        url_name = "OpenAI" if api_url == OPENAI_API_URL else "Groq"
+        print(f"DEBUG: Usando API {url_name} com modelo {model}", file=sys.stderr)
+    
+    return api_key, api_url, model
 
-def generate_social_media_post(transcript, platform="instagram"):
+def generate_social_media_post(transcript, platform="instagram", user_id=None):
     """
     Gera um texto para publicação no Instagram/TikTok baseado na transcrição do vídeo.
     
     Args:
         transcript (str): Transcrição do vídeo.
         platform (str): Plataforma para a qual o texto será criado ('instagram' ou 'tiktok').
+        user_id (int, optional): ID do usuário para obter prompts personalizados.
         
     Returns:
         str: Texto formatado para publicação.
     """
-    if not API_KEY:
-        return "Erro: Chave da API não configurada."
+    # Obter configurações de API para o usuário
+    api_key, api_url, model = get_api_config(user_id)
     
-    # Cria o prompt com base na plataforma selecionada
-    if platform.lower() == "tiktok":
-        prompt = f"""
-        Crie uma legenda atraente para um vídeo do TikTok sobre aprendizagem de inglês com base na seguinte transcrição:
-        
-        Transcrição: {transcript}
-        
-        A legenda deve:
-        - Destacar dicas de aprendizagem de inglês presentes na transcrição
-        - Ter entre 150-300 caracteres
-        - Incluir 3-5 hashtags relevantes para aprendizagem de idiomas (#aprendendoingles #dicasdeingles #englishfluency)
-        - Ser envolvente e educativa
-        - Enfatizar a importância de aprender a expressão ou tema do vídeo
-        - Ter um tom incentivador para quem está aprendendo inglês
-        """
-    else:  # Instagram por padrão
-        prompt = f"""
-        Crie uma legenda atraente para um post do Instagram sobre ensino de inglês com base na seguinte transcrição:
-        
-        Transcrição: {transcript}
-        
-        A legenda deve:
-        - Começar com uma dica valiosa de inglês relacionada ao conteúdo da transcrição
-        - Destacar a importância da expressão ou tema abordado no uso cotidiano do inglês
-        - Explicar brevemente como e quando usar a expressão ou construção gramatical mencionada
-        - Ter aproximadamente 300-500 caracteres
-        - Incluir 5-8 hashtags relevantes para aprendizagem de inglês (#englishlessons #dicasdeingles #aprenderingles)
-        - Incluir um call-to-action convidando os seguidores a praticar ou comentar
-        - Ter um tom profissional, mas amigável e encorajador para estudantes de inglês
-        """
+    if not api_key:
+        return "Erro: Chave da API não configurada. Configure sua chave API nas configurações."
+    
+    # Tentar obter prompts personalizados se o user_id for fornecido
+    custom_prompt = None
+    
+    if user_id:
+        try:
+            from src.models.settings import UserSettings
+            user_settings = UserSettings.get_by_user_id(user_id)
+            
+            if platform.lower() == "tiktok" and user_settings.tiktok_prompt:
+                custom_prompt = user_settings.tiktok_prompt
+            elif platform.lower() == "instagram" and user_settings.instagram_prompt:
+                custom_prompt = user_settings.instagram_prompt
+        except:
+            # Se ocorrer erro, continua com os prompts padrão
+            print("Erro ao buscar prompts personalizados, usando padrão", file=sys.stderr)
+    
+    # Se encontrou um prompt personalizado, usa ele substituindo o {transcript} pelo transcript real
+    if custom_prompt:
+        prompt = custom_prompt.replace("{transcript}", transcript)
+    else:
+        # Usa o prompt padrão
+        if platform.lower() == "tiktok":
+            prompt = f"""
+            Crie uma legenda atraente para um vídeo do TikTok sobre aprendizagem de inglês com base na seguinte transcrição:
+            
+            Transcrição: {transcript}
+            
+            A legenda deve:
+            - Destacar dicas de aprendizagem de inglês presentes na transcrição
+            - Ter entre 150-300 caracteres
+            - Incluir 3-5 hashtags relevantes para aprendizagem de idiomas (#aprendendoingles #dicasdeingles #englishfluency)
+            - Ser envolvente e educativa
+            - Enfatizar a importância de aprender a expressão ou tema do vídeo
+            - Ter um tom incentivador para quem está aprendendo inglês
+            """
+        else:  # Instagram por padrão
+            prompt = f"""
+            Crie uma legenda atraente para um post do Instagram sobre ensino de inglês com base na seguinte transcrição:
+            
+            Transcrição: {transcript}
+            
+            A legenda deve:
+            - Começar com uma dica valiosa de inglês relacionada ao conteúdo da transcrição
+            - Destacar a importância da expressão ou tema abordado no uso cotidiano do inglês
+            - Explicar brevemente como e quando usar a expressão ou construção gramatical mencionada
+            - Ter aproximadamente 300-500 caracteres
+            - Incluir 5-8 hashtags relevantes para aprendizagem de inglês (#englishlessons #dicasdeingles #aprenderingles)
+            - Incluir um call-to-action convidando os seguidores a praticar ou comentar
+            - Ter um tom profissional, mas amigável e encorajador para estudantes de inglês
+            """
     
     # Configuração da requisição para a API
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {API_KEY}"
+        "Authorization": f"Bearer {api_key}"
     }
     
     data = {
-        "model": MODEL,
+        "model": model,
         "messages": [
             {"role": "system", "content": "Você é um professor de inglês especialista em marketing digital que cria conteúdo educativo para redes sociais focado no ensino de inglês."},
             {"role": "user", "content": prompt}
@@ -101,8 +147,8 @@ def generate_social_media_post(transcript, platform="instagram"):
     }
     
     try:
-        print(f"DEBUG: Enviando requisição para API... ({API_URL})", file=sys.stderr)
-        response = requests.post(API_URL, headers=headers, data=json.dumps(data), timeout=30)
+        print(f"DEBUG: Enviando requisição para API... ({api_url})", file=sys.stderr)
+        response = requests.post(api_url, headers=headers, data=json.dumps(data), timeout=30)
         print(f"DEBUG: Resposta recebida! Status: {response.status_code}", file=sys.stderr)
         
         if response.status_code != 200:
@@ -122,19 +168,23 @@ def generate_social_media_post(transcript, platform="instagram"):
         print(f"DEBUG: Erro na chamada à API: {str(e)}", file=sys.stderr)
         return f"Erro ao gerar texto: {str(e)}"
 
-def correct_subtitles(autosub_transcript, manual_transcript):
+def correct_subtitles(autosub_transcript, manual_transcript, user_id=None):
     """
     Envia para a API a transcrição do autosub e a transcrição manual para corrigir inconsistências.
     
     Args:
         autosub_transcript (str): Transcrição gerada pelo autosub.
         manual_transcript (str): Transcrição manual fornecida pelo usuário.
+        user_id (int, optional): ID do usuário para obter configurações personalizadas.
         
     Returns:
         str: Transcrição corrigida no formato SRT.
     """
-    if not API_KEY:
-        return "Erro: Chave da API não configurada."
+    # Obter configurações de API para o usuário
+    api_key, api_url, model = get_api_config(user_id)
+    
+    if not api_key:
+        return "Erro: Chave da API não configurada. Configure sua chave API nas configurações."
     
     # Verifica se a transcrição é em inglês ou português
     is_english = True
@@ -193,11 +243,11 @@ def correct_subtitles(autosub_transcript, manual_transcript):
     # Configuração da requisição para a API
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {API_KEY}"
+        "Authorization": f"Bearer {api_key}"
     }
     
     data = {
-        "model": MODEL,
+        "model": model,
         "messages": [
             {"role": "system", "content": "Você é um especialista em legendagem de vídeos educativos para ensino de inglês, com ampla experiência em transcrição de diálogos e tradução português-inglês. Sua principal responsabilidade é preservar os timestamps originais e manter o formato SRT intacto, alterando APENAS o texto das legendas. IMPORTANTE: Retorne SOMENTE o conteúdo SRT, sem explicações adicionais."},
             {"role": "user", "content": prompt}
@@ -207,8 +257,8 @@ def correct_subtitles(autosub_transcript, manual_transcript):
     }
     
     try:
-        print(f"DEBUG: Enviando requisição para corrigir legendas... ({API_URL})", file=sys.stderr)
-        response = requests.post(API_URL, headers=headers, data=json.dumps(data), timeout=45)
+        print(f"DEBUG: Enviando requisição para corrigir legendas... ({api_url})", file=sys.stderr)
+        response = requests.post(api_url, headers=headers, data=json.dumps(data), timeout=45)
         print(f"DEBUG: Resposta recebida para correção! Status: {response.status_code}", file=sys.stderr)
         
         if response.status_code != 200:

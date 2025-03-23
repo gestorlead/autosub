@@ -1,0 +1,150 @@
+{% extends 'base.html' %} {% block title %}Configurações de API - AutoSub{%
+endblock %} {% block content %}
+<div class="row">
+  <div class="col-md-3">
+    <div class="card shadow-sm mb-4">
+      <div class="card-header bg-primary text-white">
+        <i class="fas fa-cogs me-2"></i>Configurações
+      </div>
+      <div class="list-group list-group-flush">
+        <a
+          href="{{ url_for('settings') }}"
+          class="list-group-item list-group-item-action {% if active_tab == 'general' %}active{% endif %}"
+        >
+          <i class="fas fa-sliders-h me-2"></i>Geral
+        </a>
+        <a
+          href="{{ url_for('settings_api') }}"
+          class="list-group-item list-group-item-action {% if active_tab == 'api' %}active{% endif %}"
+        >
+          <i class="fas fa-key me-2"></i>API
+        </a>
+        <a
+          href="{{ url_for('settings_prompts') }}"
+          class="list-group-item list-group-item-action {% if active_tab == 'prompts' %}active{% endif %}"
+        >
+          <i class="fas fa-comment-dots me-2"></i>Prompts
+        </a>
+        <a
+          href="{{ url_for('settings_models') }}"
+          class="list-group-item list-group-item-action {% if active_tab == 'models' %}active{% endif %}"
+        >
+          <i class="fas fa-microchip me-2"></i>Modelos
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-9">
+    <div class="card shadow-sm">
+      <div class="card-header bg-primary text-white">
+        <i class="fas fa-key me-2"></i>Configurações de API
+      </div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('settings_update_api') }}">
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            A chave de API da OpenAI é necessária para utilizar os recursos
+            avançados de IA como transcrição com Whisper, geração de legendas e
+            textos para redes sociais.
+          </div>
+
+          <div class="mb-4">
+            <label for="openai_api_key" class="form-label"
+              >Chave API da OpenAI</label
+            >
+            <div class="input-group">
+              <input
+                type="password"
+                class="form-control"
+                id="openai_api_key"
+                name="openai_api_key"
+                value="{{ user_settings.openai_api_key if user_settings.openai_api_key else '' }}"
+                placeholder="Insira sua chave API (sk-...)"
+              />
+              <button
+                class="btn btn-outline-secondary"
+                type="button"
+                onclick="togglePasswordVisibility('openai_api_key', 'toggle-icon-openai')"
+              >
+                <i class="fa fa-eye" id="toggle-icon-openai"></i>
+              </button>
+            </div>
+            <div class="form-text">
+              <a href="https://platform.openai.com/api-keys" target="_blank">
+                <i class="fas fa-external-link-alt me-1"></i>Obter chave API
+              </a>
+            </div>
+          </div>
+
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            A chave de API do Google Translate pode ser utilizada para tradução
+            de legendas entre idiomas diferentes com alta qualidade.
+          </div>
+
+          <div class="mb-3">
+            <label for="google_translate_api_key" class="form-label"
+              >Chave API do Google Translate</label
+            >
+            <div class="input-group">
+              <input
+                type="password"
+                class="form-control"
+                id="google_translate_api_key"
+                name="google_translate_api_key"
+                value="{{ user_settings.google_translate_api_key if user_settings.google_translate_api_key else '' }}"
+                placeholder="Insira sua chave API do Google Translate"
+              />
+              <button
+                class="btn btn-outline-secondary"
+                type="button"
+                onclick="togglePasswordVisibility('google_translate_api_key', 'toggle-icon-google')"
+              >
+                <i class="fa fa-eye" id="toggle-icon-google"></i>
+              </button>
+            </div>
+            <div class="form-text">
+              <a
+                href="https://console.cloud.google.com/apis/credentials"
+                target="_blank"
+              >
+                <i class="fas fa-external-link-alt me-1"></i>Obter chave API do
+                Google Cloud
+              </a>
+            </div>
+          </div>
+
+          <div class="alert alert-warning mt-3">
+            <i class="fas fa-lock me-2"></i>
+            <strong>Importante:</strong> Suas chaves de API são armazenadas de
+            forma segura e serão usadas apenas para processar seus próprios
+            vídeos. Nunca compartilhamos suas chaves com terceiros.
+          </div>
+
+          <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save me-2"></i>Salvar Configurações
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function togglePasswordVisibility(inputId, iconId) {
+    const passwordInput = document.getElementById(inputId);
+    const icon = document.getElementById(iconId);
+
+    if (passwordInput.type === "password") {
+      passwordInput.type = "text";
+      icon.className = "fa fa-eye-slash";
+    } else {
+      passwordInput.type = "password";
+      icon.className = "fa fa-eye";
+    }
+  }
+</script>
+{% endblock %}

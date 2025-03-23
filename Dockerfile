@@ -18,16 +18,21 @@ WORKDIR /app
 # Cria diretórios necessários
 RUN mkdir -p /app/uploads && chmod 777 /app/uploads
 RUN mkdir -p /app/src/static/uploads && chmod 777 /app/src/static/uploads
+RUN mkdir -p /app/logs && chmod 777 /app/logs
 
 # Copia o código da aplicação
 COPY . /app/
+
+# Tornar o entrypoint executável
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 # Define as variáveis de ambiente
 ENV PYTHONPATH=/app
 ENV FLASK_APP=app.py
 
-# Aguarda 5 segundos para o banco de dados inicializar
+# Porta da aplicação
 EXPOSE 5000
 
-# Script de inicialização que configura o banco de dados e inicia a aplicação
-CMD ["sh", "-c", "sleep 10 && python -m src.migrations.setup_db && python -m src.migrations.add_is_admin_column && python -m src.migrations.user_settings && gunicorn app:app --bind 0.0.0.0:5000 --timeout 300 --workers 2"]
+# Define o script de entrypoint que cuida da inicialização do banco e da aplicação
+ENTRYPOINT ["/entrypoint.sh"]

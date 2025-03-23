@@ -33,7 +33,7 @@ def setup_database():
             CREATE TABLE users (
                 id SERIAL PRIMARY KEY,
                 username VARCHAR(50) UNIQUE NOT NULL,
-                password VARCHAR(255) NOT NULL,
+                password_hash VARCHAR(255) NOT NULL,
                 email VARCHAR(100) UNIQUE NOT NULL,
                 full_name VARCHAR(100),
                 is_active BOOLEAN DEFAULT TRUE,
@@ -92,7 +92,7 @@ def setup_database():
             password_hash = generate_password_hash(f"{admin_password}{salt}")
             
             cursor.execute("""
-            INSERT INTO users (username, password, email, full_name, is_active)
+            INSERT INTO users (username, password_hash, email, full_name, is_active)
             VALUES (%s, %s, %s, %s, %s);
             """, ('admin', password_hash, 'admin@example.com', 'Administrador', True))
             
@@ -351,6 +351,60 @@ def add_language_columns():
         logger.error(f"Erro ao adicionar colunas na tabela videos: {str(e)}")
         print(f"Erro ao adicionar colunas na tabela videos: {str(e)}")
 
+def fix_password_column():
+    """
+    Verifica e corrige a coluna de senha na tabela users.
+    Renomeia 'password' para 'password_hash' se necessário.
+    """
+    try:
+        # Verificar se a tabela users existe
+        table_exists = execute_query("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'users'
+            );
+        """, fetchone=True)
+        
+        if not table_exists or not table_exists[0]:
+            print("A tabela users não existe. Pulando correção de coluna de senha.")
+            return
+            
+        # Verificar se a coluna password existe
+        password_exists = execute_query("""
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name = 'users' AND column_name = 'password'
+        """, fetchone=True)
+        
+        # Verificar se a coluna password_hash existe
+        password_hash_exists = execute_query("""
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name = 'users' AND column_name = 'password_hash'
+        """, fetchone=True)
+        
+        # Se password existe e password_hash não existe, renomear a coluna
+        if password_exists and not password_hash_exists:
+            print("Renomeando coluna password para password_hash...")
+            execute_query("""
+                ALTER TABLE users
+                RENAME COLUMN password TO password_hash;
+            """)
+            print("Coluna password renomeada para password_hash com sucesso!")
+        elif not password_hash_exists:
+            # Se nenhuma das colunas existe (caso estranho), criar a coluna password_hash
+            print("Criando coluna password_hash...")
+            execute_query("""
+                ALTER TABLE users
+                ADD COLUMN password_hash VARCHAR(255) NOT NULL DEFAULT '';
+            """)
+            print("Coluna password_hash criada com sucesso!")
+        else:
+            print("A coluna de senha já está correta. Pulando correção.")
+            
+    except Exception as e:
+        logger.error(f"Erro ao corrigir coluna de senha: {str(e)}")
+        print(f"Erro ao corrigir coluna de senha: {str(e)}")
+
 def run_all_migrations():
     """
     Executa todas as migrações em ordem.
@@ -359,6 +413,9 @@ def run_all_migrations():
     
     # Configuração inicial do banco
     setup_database()
+    
+    # Corrigir nome da coluna de senha
+    fix_password_column()
     
     # Adicionar coluna is_admin
     add_is_admin_column()

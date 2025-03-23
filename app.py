@@ -861,7 +861,7 @@ def admin_delete_user(user_id):
 @app.route('/video/<int:video_id>/update-description', methods=['POST'])
 @login_required
 def update_video_description(video_id):
-    """Atualiza a descrição (transcrição manual) de um vídeo."""
+    """Atualiza a descrição do vídeo com a transcrição manual."""
     user = get_current_user()
     video = Video.get_by_id(video_id)
     
@@ -870,12 +870,14 @@ def update_video_description(video_id):
         return redirect(url_for('dashboard'))
     
     description = request.form.get('description', '').strip()
+    if not description:
+        flash('A transcrição não pode estar vazia.', 'error')
+        return redirect(url_for('video_detail', video_id=video.id))
     
-    if video.update_details(description=description):
-        flash('Transcrição manual salva com sucesso! Agora você pode usar a função de correção de legendas.', 'success')
-    else:
-        flash('Erro ao salvar a transcrição manual. Tente novamente.', 'error')
+    # Atualizar a descrição do vídeo
+    video.update_details(description=description)
     
+    flash('Transcrição salva com sucesso! Agora você pode usá-la para corrigir as legendas.', 'success')
     return redirect(url_for('video_detail', video_id=video.id))
 
 @app.route('/settings')

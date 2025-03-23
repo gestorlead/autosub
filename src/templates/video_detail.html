@@ -1,366 +1,512 @@
-{% extends 'base.html' %}
-
-{% block title %}{{ video.title }} - AutoSub{% endblock %}
-
-{% block content %}
+{% extends 'base.html' %} {% block title %}{{ video.title }} - AutoSub{%
+endblock %} {% block content %}
 <div class="mb-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left me-2"></i>Voltar para Meus Vídeos
-        </a>
-        
-        {% if video.status != 'processing' %}
-        <form action="{{ url_for('delete_video', video_id=video.id) }}" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este vídeo?');">
-            <button type="submit" class="btn btn-outline-danger">
-                <i class="fas fa-trash me-2"></i>Excluir Vídeo
-            </button>
-        </form>
-        {% endif %}
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+      <i class="fas fa-arrow-left me-2"></i>Voltar para Meus Vídeos
+    </a>
+
+    {% if video.status != 'processing' %}
+    <form
+      action="{{ url_for('delete_video', video_id=video.id) }}"
+      method="POST"
+      onsubmit="return confirm('Tem certeza que deseja excluir este vídeo?');"
+    >
+      <button type="submit" class="btn btn-outline-danger">
+        <i class="fas fa-trash me-2"></i>Excluir Vídeo
+      </button>
+    </form>
+    {% endif %}
+  </div>
+
+  <div class="card shadow-sm">
+    <div
+      class="card-header d-flex justify-content-between align-items-center {% if video.status == 'completed' %}bg-success text-white {% elif video.status == 'processing' %}bg-warning {% elif video.status == 'error' %}bg-danger text-white {% else %}bg-secondary text-white{% endif %}"
+    >
+      <h5 class="mb-0">
+        {% if video.status == 'completed' %}
+        <i class="fas fa-check-circle me-1"></i>Concluído {% elif video.status
+        == 'processing' %}
+        <i class="fas fa-spinner fa-spin me-1"></i>Processando {% elif
+        video.status == 'error' %}
+        <i class="fas fa-exclamation-circle me-1"></i>Erro no Processamento {%
+        else %} <i class="fas fa-clock me-1"></i>Pendente {% endif %}
+      </h5>
+      <small
+        >Enviado em {{ video.created_at.strftime('%d/%m/%Y %H:%M') }}</small
+      >
     </div>
-    
-    <div class="card shadow-sm">
-        <div class="card-header d-flex justify-content-between align-items-center
-                    {% if video.status == 'completed' %}bg-success text-white
-                    {% elif video.status == 'processing' %}bg-warning
-                    {% elif video.status == 'error' %}bg-danger text-white
-                    {% else %}bg-secondary text-white{% endif %}">
-            <h5 class="mb-0">
-                {% if video.status == 'completed' %}
-                    <i class="fas fa-check-circle me-1"></i>Concluído
-                {% elif video.status == 'processing' %}
-                    <i class="fas fa-spinner fa-spin me-1"></i>Processando
-                {% elif video.status == 'error' %}
-                    <i class="fas fa-exclamation-circle me-1"></i>Erro no Processamento
-                {% else %}
-                    <i class="fas fa-clock me-1"></i>Pendente
-                {% endif %}
-            </h5>
-            <small>Enviado em {{ video.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+
+    <div class="card-body">
+      <h2 class="card-title mb-3">{{ video.title }}</h2>
+
+      <div class="row">
+        <div class="col-md-8">
+          {% if video.description %}
+          <div class="mb-4">
+            <h5>Descrição</h5>
+            <p>{{ video.description }}</p>
+          </div>
+          {% endif %}
+
+          <div class="mb-4">
+            <h5>Informações do Vídeo</h5>
+            <ul class="list-group list-group-flush">
+              <li
+                class="list-group-item d-flex justify-content-between align-items-center"
+              >
+                <span>Tipo</span>
+                <span class="badge bg-primary rounded-pill">
+                  {% if video.is_file %}
+                  <i class="fas fa-file-video me-1"></i>Arquivo {% else %}
+                  <i class="fas fa-link me-1"></i>URL {% endif %}
+                </span>
+              </li>
+
+              {% if video.is_file %}
+              <li
+                class="list-group-item d-flex justify-content-between align-items-center"
+              >
+                <span>Nome do Arquivo</span>
+                <span>{{ video.original_filename }}</span>
+              </li>
+              {% else %}
+              <li
+                class="list-group-item d-flex justify-content-between align-items-center"
+              >
+                <span>URL</span>
+                <a
+                  href="{{ video.video_url }}"
+                  target="_blank"
+                  class="text-truncate"
+                  style="max-width: 300px"
+                >
+                  {{ video.video_url }}
+                </a>
+              </li>
+              {% endif %}
+
+              <li
+                class="list-group-item d-flex justify-content-between align-items-center"
+              >
+                <span>Status</span>
+                <span
+                  class="badge {% if video.status == 'completed' %}bg-success {% elif video.status == 'processing' %}bg-warning text-dark {% elif video.status == 'error' %}bg-danger {% else %}bg-secondary{% endif %} rounded-pill"
+                >
+                  {{ video.status }}
+                </span>
+              </li>
+            </ul>
+          </div>
         </div>
-        
-        <div class="card-body">
-            <h2 class="card-title mb-3">{{ video.title }}</h2>
-            
-            <div class="row">
-                <div class="col-md-8">
-                    {% if video.description %}
-                        <div class="mb-4">
-                            <h5>Descrição</h5>
-                            <p>{{ video.description }}</p>
-                        </div>
-                    {% endif %}
-                    
-                    <div class="mb-4">
-                        <h5>Informações do Vídeo</h5>
-                        <ul class="list-group list-group-flush">
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <span>Tipo</span>
-                                <span class="badge bg-primary rounded-pill">
-                                    {% if video.is_file %}
-                                        <i class="fas fa-file-video me-1"></i>Arquivo
-                                    {% else %}
-                                        <i class="fas fa-link me-1"></i>URL
-                                    {% endif %}
-                                </span>
-                            </li>
-                            
-                            {% if video.is_file %}
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <span>Nome do Arquivo</span>
-                                    <span>{{ video.original_filename }}</span>
-                                </li>
-                            {% else %}
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <span>URL</span>
-                                    <a href="{{ video.video_url }}" target="_blank" class="text-truncate" style="max-width: 300px;">
-                                        {{ video.video_url }}
-                                    </a>
-                                </li>
-                            {% endif %}
-                            
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <span>Status</span>
-                                <span class="badge {% if video.status == 'completed' %}bg-success
-                                                 {% elif video.status == 'processing' %}bg-warning text-dark
-                                                 {% elif video.status == 'error' %}bg-danger
-                                                 {% else %}bg-secondary{% endif %} rounded-pill">
-                                    {{ video.status }}
-                                </span>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-                
-                <div class="col-md-4">
-                    <div class="card mb-3">
-                        <div class="card-header bg-primary text-white">
-                            <i class="fas fa-download me-1"></i>Downloads
-                        </div>
-                        
-                        <div class="list-group list-group-flush">
-                            {% if video.is_file and video.storage_path %}
-                                <a href="{{ url_for('download_video', video_id=video.id) }}" class="list-group-item list-group-item-action">
-                                    <div class="d-flex w-100 justify-content-between">
-                                        <h6 class="mb-1">Vídeo Original</h6>
-                                        <small><i class="fas fa-file-video"></i></small>
-                                    </div>
-                                    <small class="text-muted">Baixar o arquivo de vídeo original</small>
-                                </a>
-                            {% endif %}
-                            
-                            {% if subtitles %}
-                                {% for subtitle in subtitles %}
-                                    <a href="{{ url_for('download_subtitle', subtitle_id=subtitle.id) }}" class="list-group-item list-group-item-action">
-                                        <div class="d-flex w-100 justify-content-between">
-                                            <h6 class="mb-1">Legenda em {% if subtitle.language == 'en' %}Inglês{% elif subtitle.language == 'pt' %}Português{% else %}{{ subtitle.language }}{% endif %}</h6>
-                                            <small><i class="fas fa-closed-captioning"></i></small>
-                                        </div>
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <small class="text-muted">Arquivo .{{ subtitle.format }}</small>
-                                            <div class="btn-group btn-group-sm">
-                                                <a href="{{ url_for('view_subtitle', subtitle_id=subtitle.id) }}" class="btn btn-outline-primary">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
-                                                <a href="{{ url_for('edit_subtitle', subtitle_id=subtitle.id) }}" class="btn btn-outline-secondary">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                                <a href="{{ url_for('download_subtitle', subtitle_id=subtitle.id) }}" class="btn btn-outline-success">
-                                                    <i class="fas fa-download"></i>
-                                                </a>
-                                            </div>
-                                        </div>
-                                    </a>
-                                {% endfor %}
-                            {% elif video.status == 'completed' %}
-                                <div class="list-group-item text-center text-muted py-3">
-                                    <i class="fas fa-exclamation-circle mb-2"></i>
-                                    <p class="mb-0">Legendas não encontradas</p>
-                                </div>
-                            {% elif video.status == 'processing' %}
-                                <div class="list-group-item text-center text-muted py-3">
-                                    <div class="spinner-border spinner-border-sm mb-2" role="status">
-                                        <span class="visually-hidden">Carregando...</span>
-                                    </div>
-                                    <p class="mb-0">Processando legendas...</p>
-                                </div>
-                            {% else %}
-                                <div class="list-group-item text-center text-muted py-3">
-                                    <i class="fas fa-clock mb-2"></i>
-                                    <p class="mb-0">Aguardando processamento</p>
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
+
+        <div class="col-md-4">
+          <div class="card mb-3">
+            <div class="card-header bg-primary text-white">
+              <i class="fas fa-download me-1"></i>Downloads
             </div>
+
+            <div class="list-group list-group-flush">
+              {% if video.is_file and video.storage_path %}
+              <a
+                href="{{ url_for('download_video', video_id=video.id) }}"
+                class="list-group-item list-group-item-action"
+              >
+                <div class="d-flex w-100 justify-content-between">
+                  <h6 class="mb-1">Vídeo Original</h6>
+                  <small><i class="fas fa-file-video"></i></small>
+                </div>
+                <small class="text-muted"
+                  >Baixar o arquivo de vídeo original</small
+                >
+              </a>
+              {% endif %} {% if subtitles %} {% for subtitle in subtitles %}
+              <a
+                href="{{ url_for('download_subtitle', subtitle_id=subtitle.id) }}"
+                class="list-group-item list-group-item-action"
+              >
+                <div class="d-flex w-100 justify-content-between">
+                  <h6 class="mb-1">
+                    Legenda em {% if subtitle.language == 'en' %}Inglês{% elif
+                    subtitle.language == 'pt' %}Português{% else %}{{
+                    subtitle.language }}{% endif %}
+                  </h6>
+                  <small><i class="fas fa-closed-captioning"></i></small>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                  <small class="text-muted"
+                    >Arquivo .{{ subtitle.format }}</small
+                  >
+                  <div class="btn-group btn-group-sm">
+                    <a
+                      href="{{ url_for('view_subtitle', subtitle_id=subtitle.id) }}"
+                      class="btn btn-outline-primary"
+                    >
+                      <i class="fas fa-eye"></i>
+                    </a>
+                    <a
+                      href="{{ url_for('edit_subtitle', subtitle_id=subtitle.id) }}"
+                      class="btn btn-outline-secondary"
+                    >
+                      <i class="fas fa-edit"></i>
+                    </a>
+                    <a
+                      href="{{ url_for('download_subtitle', subtitle_id=subtitle.id) }}"
+                      class="btn btn-outline-success"
+                    >
+                      <i class="fas fa-download"></i>
+                    </a>
+                  </div>
+                </div>
+              </a>
+              {% endfor %} {% elif video.status == 'completed' %}
+              <div class="list-group-item text-center text-muted py-3">
+                <i class="fas fa-exclamation-circle mb-2"></i>
+                <p class="mb-0">Legendas não encontradas</p>
+              </div>
+              {% elif video.status == 'processing' %}
+              <div class="list-group-item text-center text-muted py-3">
+                <div
+                  class="spinner-border spinner-border-sm mb-2"
+                  role="status"
+                >
+                  <span class="visually-hidden">Carregando...</span>
+                </div>
+                <p class="mb-0">Processando legendas...</p>
+              </div>
+              {% else %}
+              <div class="list-group-item text-center text-muted py-3">
+                <i class="fas fa-clock mb-2"></i>
+                <p class="mb-0">Aguardando processamento</p>
+              </div>
+              {% endif %}
+            </div>
+          </div>
         </div>
+      </div>
     </div>
+  </div>
 </div>
 
 {% if video.status == 'completed' and subtitles %}
 <!-- Social Media Text Section -->
 <div class="card shadow-sm mb-4">
-    <div class="card-header bg-primary text-white">
-        <h5 class="mb-0"><i class="fas fa-hashtag me-2"></i>Textos para Redes Sociais</h5>
-    </div>
-    <div class="card-body">
-        <ul class="nav nav-tabs" id="socialTabs" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="instagram-tab" data-bs-toggle="tab" data-bs-target="#instagram" 
-                        type="button" role="tab" aria-controls="instagram" aria-selected="true">
-                    <i class="fab fa-instagram me-2"></i>Instagram
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="tiktok-tab" data-bs-toggle="tab" data-bs-target="#tiktok" 
-                        type="button" role="tab" aria-controls="tiktok" aria-selected="false">
-                    <i class="fab fa-tiktok me-2"></i>TikTok
-                </button>
-            </li>
-        </ul>
-        
-        <div class="tab-content p-3 mt-2" id="socialTabsContent">
-            <div class="tab-pane fade show active" id="instagram" role="tabpanel" aria-labelledby="instagram-tab">
-                {% if social_media_text and social_media_text.instagram %}
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h6>Texto para Instagram</h6>
-                        <button class="btn btn-sm btn-outline-primary copy-btn" data-content="instagram">
-                            <i class="fas fa-copy me-1"></i>Copiar
-                        </button>
-                    </div>
-                    <div class="form-control social-text" style="height: 200px; overflow-y: auto;" id="instagram-text">
-                        {{ social_media_text.instagram|nl2br }}
-                    </div>
-                {% else %}
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>Clique no botão abaixo para gerar texto para Instagram.
-                    </div>
-                    <button class="btn btn-primary generate-social" data-platform="instagram">
-                        <i class="fas fa-magic me-2"></i>Gerar Texto para Instagram
-                    </button>
-                {% endif %}
-            </div>
-            
-            <div class="tab-pane fade" id="tiktok" role="tabpanel" aria-labelledby="tiktok-tab">
-                {% if social_media_text and social_media_text.tiktok %}
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h6>Texto para TikTok</h6>
-                        <button class="btn btn-sm btn-outline-primary copy-btn" data-content="tiktok">
-                            <i class="fas fa-copy me-1"></i>Copiar
-                        </button>
-                    </div>
-                    <div class="form-control social-text" style="height: 200px; overflow-y: auto;" id="tiktok-text">
-                        {{ social_media_text.tiktok|nl2br }}
-                    </div>
-                {% else %}
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>Clique no botão abaixo para gerar texto para TikTok.
-                    </div>
-                    <button class="btn btn-primary generate-social" data-platform="tiktok">
-                        <i class="fas fa-magic me-2"></i>Gerar Texto para TikTok
-                    </button>
-                {% endif %}
-            </div>
+  <div class="card-header bg-primary text-white">
+    <h5 class="mb-0">
+      <i class="fas fa-hashtag me-2"></i>Textos para Redes Sociais
+    </h5>
+  </div>
+  <div class="card-body">
+    <ul class="nav nav-tabs" id="socialTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button
+          class="nav-link active"
+          id="instagram-tab"
+          data-bs-toggle="tab"
+          data-bs-target="#instagram"
+          type="button"
+          role="tab"
+          aria-controls="instagram"
+          aria-selected="true"
+        >
+          <i class="fab fa-instagram me-2"></i>Instagram
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button
+          class="nav-link"
+          id="tiktok-tab"
+          data-bs-toggle="tab"
+          data-bs-target="#tiktok"
+          type="button"
+          role="tab"
+          aria-controls="tiktok"
+          aria-selected="false"
+        >
+          <i class="fab fa-tiktok me-2"></i>TikTok
+        </button>
+      </li>
+    </ul>
+
+    <div class="tab-content p-3 mt-2" id="socialTabsContent">
+      <div
+        class="tab-pane fade show active"
+        id="instagram"
+        role="tabpanel"
+        aria-labelledby="instagram-tab"
+      >
+        {% if social_media_text and social_media_text.instagram %}
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <h6>Texto para Instagram</h6>
+          <button
+            class="btn btn-sm btn-outline-primary copy-btn"
+            data-content="instagram"
+          >
+            <i class="fas fa-copy me-1"></i>Copiar
+          </button>
         </div>
-        
-        <div class="mt-3">
-            <div class="alert alert-info">
-                <small><i class="fas fa-info-circle me-2"></i>Estes textos são gerados automaticamente usando Inteligência Artificial com base na transcrição do vídeo. Você pode editá-los conforme necessário antes de usar.</small>
-            </div>
+        <div
+          class="form-control social-text"
+          style="height: 200px; overflow-y: auto"
+          id="instagram-text"
+        >
+          {{ social_media_text.instagram|nl2br }}
         </div>
+        {% else %}
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle me-2"></i>Clique no botão abaixo para
+          gerar texto para Instagram.
+        </div>
+        <button
+          class="btn btn-primary generate-social"
+          data-platform="instagram"
+        >
+          <i class="fas fa-magic me-2"></i>Gerar Texto para Instagram
+        </button>
+        {% endif %}
+      </div>
+
+      <div
+        class="tab-pane fade"
+        id="tiktok"
+        role="tabpanel"
+        aria-labelledby="tiktok-tab"
+      >
+        {% if social_media_text and social_media_text.tiktok %}
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <h6>Texto para TikTok</h6>
+          <button
+            class="btn btn-sm btn-outline-primary copy-btn"
+            data-content="tiktok"
+          >
+            <i class="fas fa-copy me-1"></i>Copiar
+          </button>
+        </div>
+        <div
+          class="form-control social-text"
+          style="height: 200px; overflow-y: auto"
+          id="tiktok-text"
+        >
+          {{ social_media_text.tiktok|nl2br }}
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle me-2"></i>Clique no botão abaixo para
+          gerar texto para TikTok.
+        </div>
+        <button class="btn btn-primary generate-social" data-platform="tiktok">
+          <i class="fas fa-magic me-2"></i>Gerar Texto para TikTok
+        </button>
+        {% endif %}
+      </div>
     </div>
+
+    <div class="mt-3">
+      <div class="alert alert-info">
+        <small
+          ><i class="fas fa-info-circle me-2"></i>Estes textos são gerados
+          automaticamente usando Inteligência Artificial com base na transcrição
+          do vídeo. Você pode editá-los conforme necessário antes de
+          usar.</small
+        >
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Correction Section -->
 {% if video.description and video.description.strip() %}
 <div class="card shadow-sm mb-4">
-    <div class="card-header bg-primary text-white">
-        <h5 class="mb-0"><i class="fas fa-spell-check me-2"></i>Correção de Legendas</h5>
+  <div class="card-header bg-primary text-white">
+    <h5 class="mb-0">
+      <i class="fas fa-spell-check me-2"></i>Correção de Legendas
+    </h5>
+  </div>
+  <div class="card-body">
+    <p>
+      Você forneceu uma transcrição manual na descrição do vídeo. Clique no
+      botão abaixo para usar esta transcrição para corrigir as legendas geradas
+      automaticamente.
+    </p>
+
+    <form
+      action="{{ url_for('correct_video_subtitles', video_id=video.id) }}"
+      method="POST"
+    >
+      <button type="submit" class="btn btn-primary">
+        <i class="fas fa-check-circle me-2"></i>Corrigir Legendas com
+        Transcrição Manual
+      </button>
+    </form>
+
+    <div class="mt-3">
+      <div class="alert alert-warning">
+        <small
+          ><i class="fas fa-exclamation-triangle me-2"></i>Esta operação irá
+          sobrescrever os arquivos de legenda atuais com versões corrigidas
+          baseadas na transcrição que você forneceu.</small
+        >
+      </div>
     </div>
-    <div class="card-body">
-        <p>Você forneceu uma transcrição manual na descrição do vídeo. Clique no botão abaixo para usar esta transcrição para corrigir as legendas geradas automaticamente.</p>
-        
-        <form action="{{ url_for('correct_video_subtitles', video_id=video.id) }}" method="POST">
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-check-circle me-2"></i>Corrigir Legendas com Transcrição Manual
-            </button>
-        </form>
-        
-        <div class="mt-3">
-            <div class="alert alert-warning">
-                <small><i class="fas fa-exclamation-triangle me-2"></i>Esta operação irá sobrescrever os arquivos de legenda atuais com versões corrigidas baseadas na transcrição que você forneceu.</small>
-            </div>
+  </div>
+</div>
+{% else %}
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-primary text-white">
+    <h5 class="mb-0">
+      <i class="fas fa-keyboard me-2"></i>Adicionar Transcrição Manual
+    </h5>
+  </div>
+  <div class="card-body">
+    <p>
+      Adicione uma transcrição manual para melhorar a precisão das legendas.
+    </p>
+
+    <form
+      action="{{ url_for('update_video_description', video_id=video.id) }}"
+      method="POST"
+    >
+      <div class="mb-3">
+        <label for="description" class="form-label">Transcrição do Vídeo</label>
+        <textarea
+          class="form-control"
+          id="description"
+          name="description"
+          rows="5"
+          placeholder="Digite a transcrição completa do vídeo..."
+        ></textarea>
+        <div class="form-text">
+          Uma transcrição precisa ajudará a melhorar a qualidade das legendas.
         </div>
+      </div>
+      <button type="submit" class="btn btn-primary">
+        <i class="fas fa-save me-2"></i>Salvar Transcrição
+      </button>
+    </form>
+
+    <div class="mt-3">
+      <div class="alert alert-info">
+        <small
+          ><i class="fas fa-info-circle me-2"></i>Após salvar a transcrição,
+          você poderá usá-la para corrigir as legendas geradas
+          automaticamente.</small
+        >
+      </div>
     </div>
+  </div>
 </div>
-{% endif %}
-{% endif %}
-
-{% if video.status == 'error' %}
+{% endif %} {% endif %} {% if video.status == 'error' %}
 <div class="alert alert-danger" role="alert">
-    <h4 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>Erro no Processamento</h4>
-    <p>Ocorreu um erro ao processar este vídeo. Possíveis causas:</p>
-    <ul>
-        <li>O formato do vídeo não é compatível com o processamento de áudio.</li>
-        <li>O vídeo não possui áudio ou tem qualidade de áudio muito baixa.</li>
-        <li>O vídeo está protegido ou foi removido (no caso de URLs).</li>
-    </ul>
-    <hr>
-    <p class="mb-0">Tente novamente com outro vídeo ou entre em contato com o suporte se o problema persistir.</p>
+  <h4 class="alert-heading">
+    <i class="fas fa-exclamation-triangle me-2"></i>Erro no Processamento
+  </h4>
+  <p>Ocorreu um erro ao processar este vídeo. Possíveis causas:</p>
+  <ul>
+    <li>O formato do vídeo não é compatível com o processamento de áudio.</li>
+    <li>O vídeo não possui áudio ou tem qualidade de áudio muito baixa.</li>
+    <li>O vídeo está protegido ou foi removido (no caso de URLs).</li>
+  </ul>
+  <hr />
+  <p class="mb-0">
+    Tente novamente com outro vídeo ou entre em contato com o suporte se o
+    problema persistir.
+  </p>
 </div>
-{% endif %}
-
-{% if video.status == 'processing' %}
+{% endif %} {% if video.status == 'processing' %}
 <script>
-    // Atualiza a página a cada 30 segundos para verificar o status
-    setTimeout(function() {
-        window.location.reload();
-    }, 30000);
+  // Atualiza a página a cada 30 segundos para verificar o status
+  setTimeout(function () {
+    window.location.reload();
+  }, 30000);
 </script>
-{% endif %}
-
-{% block scripts %}
+{% endif %} {% block scripts %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Copy functionality
-        document.querySelectorAll('.copy-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const platform = this.getAttribute('data-content');
-                const textElement = document.getElementById(`${platform}-text`);
-                
-                if (textElement) {
-                    const text = textElement.innerText;
-                    navigator.clipboard.writeText(text).then(() => {
-                        // Change button text temporarily
-                        const originalText = this.innerHTML;
-                        this.innerHTML = '<i class="fas fa-check me-1"></i>Copiado!';
-                        setTimeout(() => {
-                            this.innerHTML = originalText;
-                        }, 2000);
-                    });
-                }
-            });
-        });
-        
-        // Generate social media text functionality
-        document.querySelectorAll('.generate-social').forEach(button => {
-            button.addEventListener('click', function() {
-                const platform = this.getAttribute('data-platform');
-                const loadingHtml = '<i class="fas fa-spinner fa-spin me-2"></i>Gerando...';
-                const originalHtml = this.innerHTML;
-                
-                this.innerHTML = loadingHtml;
-                this.disabled = true;
-                
-                // AJAX request to generate social media text
-                fetch(`{{ url_for('generate_social_media_content', video_id=video.id) }}?platform=${platform}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        const tabPane = document.getElementById(platform);
-                        if (tabPane) {
-                            tabPane.innerHTML = `
+  document.addEventListener("DOMContentLoaded", function () {
+    // Copy functionality
+    document.querySelectorAll(".copy-btn").forEach((button) => {
+      button.addEventListener("click", function () {
+        const platform = this.getAttribute("data-content");
+        const textElement = document.getElementById(`${platform}-text`);
+
+        if (textElement) {
+          const text = textElement.innerText;
+          navigator.clipboard.writeText(text).then(() => {
+            // Change button text temporarily
+            const originalText = this.innerHTML;
+            this.innerHTML = '<i class="fas fa-check me-1"></i>Copiado!';
+            setTimeout(() => {
+              this.innerHTML = originalText;
+            }, 2000);
+          });
+        }
+      });
+    });
+
+    // Generate social media text functionality
+    document.querySelectorAll(".generate-social").forEach((button) => {
+      button.addEventListener("click", function () {
+        const platform = this.getAttribute("data-platform");
+        const loadingHtml =
+          '<i class="fas fa-spinner fa-spin me-2"></i>Gerando...';
+        const originalHtml = this.innerHTML;
+
+        this.innerHTML = loadingHtml;
+        this.disabled = true;
+
+        // AJAX request to generate social media text
+        fetch(
+          `{{ url_for('generate_social_media_content', video_id=video.id) }}?platform=${platform}`
+        )
+          .then((response) => response.json())
+          .then((data) => {
+            const tabPane = document.getElementById(platform);
+            if (tabPane) {
+              tabPane.innerHTML = `
                                 <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <h6>Texto para ${platform.charAt(0).toUpperCase() + platform.slice(1)}</h6>
+                                    <h6>Texto para ${
+                                      platform.charAt(0).toUpperCase() +
+                                      platform.slice(1)
+                                    }</h6>
                                     <button class="btn btn-sm btn-outline-primary copy-btn" data-content="${platform}">
                                         <i class="fas fa-copy me-1"></i>Copiar
                                     </button>
                                 </div>
                                 <div class="form-control social-text" style="height: 200px; overflow-y: auto;" id="${platform}-text">
-                                    ${data.text.replace(/\n/g, '<br>')}
+                                    ${data.text.replace(/\n/g, "<br>")}
                                 </div>
                             `;
-                            
-                            // Reattach event listeners
-                            document.querySelectorAll('.copy-btn').forEach(btn => {
-                                btn.addEventListener('click', function() {
-                                    const plt = this.getAttribute('data-content');
-                                    const txtElement = document.getElementById(`${plt}-text`);
-                                    
-                                    if (txtElement) {
-                                        const txt = txtElement.innerText;
-                                        navigator.clipboard.writeText(txt).then(() => {
-                                            const origText = this.innerHTML;
-                                            this.innerHTML = '<i class="fas fa-check me-1"></i>Copiado!';
-                                            setTimeout(() => {
-                                                this.innerHTML = origText;
-                                            }, 2000);
-                                        });
-                                    }
-                                });
-                            });
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('Erro ao gerar texto. Por favor, tente novamente.');
-                    })
-                    .finally(() => {
-                        this.innerHTML = originalHtml;
-                        this.disabled = false;
+
+              // Reattach event listeners
+              document.querySelectorAll(".copy-btn").forEach((btn) => {
+                btn.addEventListener("click", function () {
+                  const plt = this.getAttribute("data-content");
+                  const txtElement = document.getElementById(`${plt}-text`);
+
+                  if (txtElement) {
+                    const txt = txtElement.innerText;
+                    navigator.clipboard.writeText(txt).then(() => {
+                      const origText = this.innerHTML;
+                      this.innerHTML =
+                        '<i class="fas fa-check me-1"></i>Copiado!';
+                      setTimeout(() => {
+                        this.innerHTML = origText;
+                      }, 2000);
                     });
-            });
-        });
+                  }
+                });
+              });
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            alert("Erro ao gerar texto. Por favor, tente novamente.");
+          })
+          .finally(() => {
+            this.innerHTML = originalHtml;
+            this.disabled = false;
+          });
+      });
     });
+  });
 </script>
-{% endblock %}
-{% endblock %} 
+{% endblock %} {% endblock %}

@@ -37,7 +37,7 @@ def format_timestamp(seconds):
 from src.migrations.user_settings import create_user_settings_table
 
 # Versão do aplicativo
-APP_VERSION = "1.1.4"
+APP_VERSION = "1.1.5"
 
 # Carrega as variáveis definidas no .env
 load_dotenv()

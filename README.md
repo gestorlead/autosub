@@ -2,7 +2,7 @@
 
 O AutoSub é uma aplicação web para geração automática de legendas para vídeos. É possível fazer upload de arquivos de vídeo ou fornecer URLs de vídeos online, e o sistema gera legendas em inglês e português.
 
-![Versão](https://img.shields.io/badge/versão-1.1.2-blue)
+![Versão](https://img.shields.io/badge/versão-1.1.5-blue)
 ![Licença](https://img.shields.io/badge/licença-MIT-green)
 
 ## Funcionalidades
@@ -17,6 +17,11 @@ O AutoSub é uma aplicação web para geração automática de legendas para ví
 - Correção de legendas com base em transcrições manuais
 - Geração de textos para redes sociais com base nas legendas
 - Painel administrativo para gerenciamento de usuários
+- Configurações personalizadas por usuário:
+  - Escolha de serviço de transcrição (AutoSub ou Whisper)
+  - Chaves API individuais (OpenAI, Google Translate)
+  - Seleção de modelo OpenAI preferido
+  - Prompts personalizados para redes sociais
 
 ## Requisitos
 
@@ -38,12 +43,14 @@ docker-compose up -d
 ### A partir do código-fonte
 
 1. Clone o repositório:
+
    ```
    git clone https://github.com/gestorlead/autosub.git
    cd autosub
    ```
 
 2. Execute o script de inicialização:
+
    ```
    ./start.sh
    ```
@@ -55,12 +62,14 @@ docker-compose up -d
 Se preferir executar localmente sem Docker:
 
 1. Clone o repositório:
+
    ```
    git clone https://github.com/gestorlead/autosub.git
    cd autosub
    ```
 
 2. Execute o script de inicialização local:
+
    ```
    ./start-local.sh
    ```
@@ -91,6 +100,17 @@ Este comando mostrará as tabelas existentes e os dados armazenados no banco de 
 4. Opcionalmente, forneça uma transcrição manual para melhorar a precisão das legendas
 5. Aguarde o processamento (pode demorar, dependendo do tamanho do vídeo)
 6. Acesse a página de detalhes do vídeo para visualizar, editar ou baixar as legendas
+
+### Configurações Personalizadas
+
+Cada usuário pode personalizar sua experiência:
+
+1. Acesse o menu de Configurações no canto superior direito
+2. Configure suas preferências:
+   - **Geral**: Escolha o serviço de transcrição padrão
+   - **API**: Configure suas chaves API pessoais para OpenAI e Google Translate
+   - **Modelos**: Selecione o modelo de IA preferido para geração de texto
+   - **Prompts**: Personalize os prompts para geração de conteúdo para Instagram e TikTok
 
 ## Administração de Usuários
 

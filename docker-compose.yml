@@ -11,11 +11,7 @@ services:
       - ./uploads:/app/uploads
       - ./src:/app/src
       - ./app.py:/app/app.py
-      - ./.env:/app/.env
-    env_file:
-      - .env
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
       - DB_HOST=db
       - DB_PORT=5432
       - DB_NAME=autosub
@@ -23,10 +19,13 @@ services:
       - DB_PASSWORD=postgres
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - ADMIN_USERNAME=${ADMIN_USERNAME}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
-      - ADMIN_EMAIL=${ADMIN_EMAIL}
-      - SALT=${SALT}
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=admin123
+      - ADMIN_EMAIL=admin@example.com
+      - SALT=c89f7d83b48a42e99addf3fb9a10c2a4
+      - FLASK_SECRET_KEY=e3ac3d46-20e1-4a43-8c8f-230e142a3df4
+      - UPLOAD_FOLDER=/app/uploads
+      - ALLOWED_EXTENSIONS=mp4,mov,avi,mkv
     depends_on:
       - db
 

@@ -5,14 +5,10 @@ import sys
 import dotenv
 
 # Carregar variáveis de ambiente dos arquivos .env ou .env.dev se existirem
+# Usado apenas para outras configurações, não para chaves API
 dotenv.load_dotenv('.env', override=True)
 if os.path.exists('.env.dev'):
     dotenv.load_dotenv('.env.dev', override=True)
-
-# Obter as chaves da API da variável de ambiente (referência para desenvolvimento)
-# Estas chaves serão usadas como fallback quando não houver chave definida para um usuário
-OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
-GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
 
 # URLs das APIs
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
@@ -31,18 +27,10 @@ def get_api_config(user_id=None):
     Returns:
         tuple: (api_key, api_url, model) configurados para o usuário ou valores padrão.
     """
-    # Valores padrão (fallback)
-    api_key = OPENAI_API_KEY
+    # Valores padrão (iniciais)
+    api_key = None
     api_url = OPENAI_API_URL
     model = DEFAULT_MODEL
-    
-    # Se GROQ estiver disponível e não houver user_id, usar GROQ como padrão
-    if not user_id and GROQ_API_KEY and GROQ_API_KEY != "":
-        print(f"DEBUG: Usando API do Groq (padrão)", file=sys.stderr)
-        api_key = GROQ_API_KEY
-        api_url = GROQ_API_URL
-        model = "llama3-70b-8192"  # Modelo compatível com Groq
-        return api_key, api_url, model
     
     # Tentar obter configurações do usuário
     if user_id:
@@ -64,9 +52,9 @@ def get_api_config(user_id=None):
             print(f"DEBUG: Erro ao obter configurações do usuário: {str(e)}", file=sys.stderr)
             # Continua com os valores padrão em caso de erro
     
-    # Se não há chave API configurada (nem do usuário, nem do sistema)
+    # Se não há chave API configurada
     if not api_key:
-        print("AVISO: Nenhuma chave API configurada. A geração de texto não funcionará.", file=sys.stderr)
+        print("AVISO: Nenhuma chave API configurada para o usuário. A geração de texto não funcionará.", file=sys.stderr)
     else:
         url_name = "OpenAI" if api_url == OPENAI_API_URL else "Groq"
         print(f"DEBUG: Usando API {url_name} com modelo {model}", file=sys.stderr)

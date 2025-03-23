@@ -389,17 +389,20 @@ def process_video(video_id):
         user_settings = UserSettings.get_by_user_id(video.user_id)
         logger.info(f"[INFO] Configurações de usuário recuperadas com sucesso")
         
-        # Obter a chave da API OpenAI
-        openai_api_key = user_settings.openai_api_key
-        logger.info(f"[INFO] Chave API OpenAI: {'Configurada' if openai_api_key else 'Não configurada'}")
+        # Verificar qual serviço de transcrição usar
+        transcription_service = user_settings.transcription_service
+        logger.info(f"[INFO] Serviço de transcrição configurado: {transcription_service}")
         
-        if not openai_api_key:
-            logger.error(f"[ERRO] Chave da API OpenAI não encontrada para o usuário {video.user_id}")
-            video.update_status('error')
-            return
-        
-        logger.info(f"[INFO] === INICIANDO TRANSCRIÇÃO COM WHISPER ===")
-        logger.info(f"[INFO] Idioma original: {video.source_language}, Idioma alvo: {video.target_language}, Número de personagens: {video.num_speakers}")
+        # Obter a chave da API OpenAI se estiver usando o Whisper
+        openai_api_key = None
+        if transcription_service == 'whisper':
+            openai_api_key = user_settings.openai_api_key
+            logger.info(f"[INFO] Chave API OpenAI: {'Configurada' if openai_api_key else 'Não configurada'}")
+            
+            if not openai_api_key:
+                logger.error(f"[ERRO] Chave da API OpenAI não encontrada para o usuário {video.user_id}, mas serviço Whisper foi selecionado")
+                logger.info(f"[INFO] Alterando para serviço AutoSub como fallback")
+                transcription_service = 'autosub'
         
         # Definir caminhos de saída para as legendas
         source_srt_path = f"{base_path}_{video.source_language}.srt"
@@ -408,18 +411,7 @@ def process_video(video_id):
         logger.info(f"[INFO] Arquivo de legendas traduzidas será salvo em: {target_srt_path}")
         
         try:
-            # Importar a biblioteca OpenAI
-            logger.info(f"[INFO] Verificando disponibilidade da biblioteca OpenAI")
-            try:
-                import openai
-                logger.info(f"[INFO] Biblioteca OpenAI importada com sucesso")
-            except ImportError:
-                logger.info(f"[ERRO] Biblioteca OpenAI não encontrada, tentando instalar automaticamente")
-                subprocess.run(['pip', 'install', 'openai'], check=True)
-                import openai
-                logger.info(f"[INFO] Biblioteca OpenAI instalada e importada com sucesso")
-            
-            # Extrair áudio do vídeo (apenas o áudio é necessário para Whisper)
+            # Extrair áudio do vídeo (necessário para ambos os serviços)
             logger.info(f"[INFO] === EXTRAÇÃO DE ÁUDIO ===")
             logger.info(f"[INFO] Iniciando extração de áudio do vídeo: {video_path}")
             audio_path = f"{base_path}.wav"
@@ -446,48 +438,90 @@ def process_video(video_id):
             audio_file_size = os.path.getsize(audio_path) / (1024 * 1024)  # Tamanho em MB
             logger.info(f"[INFO] Tamanho do arquivo de áudio: {audio_file_size:.2f} MB")
             
-            if audio_file_size > 25:
-                logger.warning(f"[AVISO] Arquivo de áudio é muito grande para a API Whisper (> 25MB). Iniciando compressão")
-                compressed_audio_path = f"{base_path}_compressed.mp3"
-                logger.info(f"[INFO] Arquivo comprimido será salvo em: {compressed_audio_path}")
-                compress_cmd = [
-                    'ffmpeg', '-y', '-i', audio_path,
-                    '-codec:a', 'libmp3lame', '-qscale:a', '9',
-                    compressed_audio_path
-                ]
-                logger.info(f"[INFO] Executando compressão com ffmpeg: {' '.join(compress_cmd)}")
-                subprocess.run(compress_cmd, check=True, stderr=subprocess.PIPE)
-                audio_path = compressed_audio_path
-                compressed_size = os.path.getsize(audio_path) / (1024 * 1024)
-                logger.info(f"[INFO] Áudio comprimido com sucesso: {audio_path}, tamanho final: {compressed_size:.2f} MB")
-            
-            # Inicializar cliente OpenAI
-            logger.info(f"[INFO] === TRANSCRIÇÃO COM API WHISPER ===")
-            logger.info(f"[INFO] Configurando cliente OpenAI com chave API")
-            client = openai.OpenAI(api_key=openai_api_key)
-            logger.info(f"[INFO] Cliente OpenAI inicializado com sucesso")
-            
-            # Enviar para a API Whisper
-            logger.info(f"[INFO] Iniciando envio do arquivo de áudio para a API Whisper")
-            logger.info(f"[INFO] Parâmetros: modelo=whisper-1, idioma={video.source_language}")
-            logger.info(f"[INFO] Este processo pode demorar alguns minutos dependendo do tamanho do arquivo")
-            
-            with open(audio_path, 'rb') as audio_file:
-                # Usar a API para transcrição
-                logger.info(f"[INFO] Enviando arquivo para a API Whisper...")
-                transcription = client.audio.transcriptions.create(
-                    model="whisper-1",
-                    file=audio_file,
-                    response_format="srt",
-                    language=video.source_language,
-                    prompt=f"Este áudio possui {video.num_speakers} personagens." if video.num_speakers > 0 else ""
-                )
-                logger.info(f"[INFO] Resposta recebida da API Whisper com sucesso")
+            if transcription_service == 'whisper':
+                # Processar com Whisper API
+                logger.info(f"[INFO] === INICIANDO TRANSCRIÇÃO COM WHISPER ===")
                 
-                # Salvar a transcrição no formato SRT
-                logger.info(f"[INFO] Salvando transcrição no formato SRT")
-                with open(source_srt_path, 'w', encoding='utf-8') as srt_file:
-                    srt_file.write(transcription)
+                if audio_file_size > 25:
+                    logger.warning(f"[AVISO] Arquivo de áudio é muito grande para a API Whisper (> 25MB). Iniciando compressão")
+                    compressed_audio_path = f"{base_path}_compressed.mp3"
+                    logger.info(f"[INFO] Arquivo comprimido será salvo em: {compressed_audio_path}")
+                    compress_cmd = [
+                        'ffmpeg', '-y', '-i', audio_path,
+                        '-codec:a', 'libmp3lame', '-qscale:a', '9',
+                        compressed_audio_path
+                    ]
+                    logger.info(f"[INFO] Executando compressão com ffmpeg: {' '.join(compress_cmd)}")
+                    subprocess.run(compress_cmd, check=True, stderr=subprocess.PIPE)
+                    audio_path = compressed_audio_path
+                    compressed_size = os.path.getsize(audio_path) / (1024 * 1024)
+                    logger.info(f"[INFO] Áudio comprimido com sucesso: {audio_path}, tamanho final: {compressed_size:.2f} MB")
+                
+                # Importar a biblioteca OpenAI
+                logger.info(f"[INFO] Verificando disponibilidade da biblioteca OpenAI")
+                try:
+                    import openai
+                    logger.info(f"[INFO] Biblioteca OpenAI importada com sucesso")
+                except ImportError:
+                    logger.info(f"[ERRO] Biblioteca OpenAI não encontrada, tentando instalar automaticamente")
+                    subprocess.run(['pip', 'install', 'openai'], check=True)
+                    import openai
+                    logger.info(f"[INFO] Biblioteca OpenAI instalada e importada com sucesso")
+                
+                # Inicializar cliente OpenAI
+                logger.info(f"[INFO] === TRANSCRIÇÃO COM API WHISPER ===")
+                logger.info(f"[INFO] Configurando cliente OpenAI com chave API")
+                client = openai.OpenAI(api_key=openai_api_key)
+                logger.info(f"[INFO] Cliente OpenAI inicializado com sucesso")
+                
+                # Enviar para a API Whisper
+                logger.info(f"[INFO] Iniciando envio do arquivo de áudio para a API Whisper")
+                logger.info(f"[INFO] Parâmetros: modelo=whisper-1, idioma={video.source_language}")
+                logger.info(f"[INFO] Este processo pode demorar alguns minutos dependendo do tamanho do arquivo")
+                
+                with open(audio_path, 'rb') as audio_file:
+                    # Usar a API para transcrição
+                    logger.info(f"[INFO] Enviando arquivo para a API Whisper...")
+                    transcription = client.audio.transcriptions.create(
+                        model="whisper-1",
+                        file=audio_file,
+                        response_format="srt",
+                        language=video.source_language,
+                        prompt=f"Este áudio possui {video.num_speakers} personagens." if video.num_speakers > 0 else ""
+                    )
+                    logger.info(f"[INFO] Resposta recebida da API Whisper com sucesso")
+                    
+                    # Salvar a transcrição no formato SRT
+                    logger.info(f"[INFO] Salvando transcrição no formato SRT")
+                    with open(source_srt_path, 'w', encoding='utf-8') as srt_file:
+                        srt_file.write(transcription)
+                    
+                    logger.info(f"[INFO] Legendas em {video.source_language} geradas com sucesso em: {source_srt_path}")
+                    logger.info(f"[INFO] Tamanho do arquivo de legendas: {os.path.getsize(source_srt_path)} bytes")
+            else:
+                # Processar com AutoSub (serviço local)
+                logger.info(f"[INFO] === INICIANDO TRANSCRIÇÃO COM AUTOSUB ===")
+                logger.info(f"[INFO] Parâmetros: idioma={video.source_language}, speakers={video.num_speakers}")
+                
+                # Configurar comando AutoSub para transcrição
+                autosub_cmd = [
+                    'autosub', 
+                    '-i', audio_path, 
+                    '-o', source_srt_path,
+                    '-S', video.source_language,
+                    '-F', 'srt'
+                ]
+                
+                if video.num_speakers > 0:
+                    autosub_cmd.extend(['--speech-regions', 'voice-activity-detection'])
+                
+                logger.info(f"[INFO] Executando comando AutoSub: {' '.join(autosub_cmd)}")
+                subprocess.run(autosub_cmd, check=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+                
+                # Verificar se o arquivo de legendas foi gerado
+                if not os.path.exists(source_srt_path):
+                    logger.error(f"[ERRO] Arquivo de legendas não foi gerado pelo AutoSub: {source_srt_path}")
+                    raise Exception(f"Arquivo de legendas não foi gerado pelo AutoSub: {source_srt_path}")
                 
                 logger.info(f"[INFO] Legendas em {video.source_language} geradas com sucesso em: {source_srt_path}")
                 logger.info(f"[INFO] Tamanho do arquivo de legendas: {os.path.getsize(source_srt_path)} bytes")

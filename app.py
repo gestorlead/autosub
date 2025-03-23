@@ -9,6 +9,11 @@ import re
 from markupsafe import Markup
 import logging
 import traceback
+from logging.config import dictConfig
+import uuid
+import json
+from functools import wraps
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # Configurar o sistema de logs
 from src.utils.logging_config import *
@@ -19,6 +24,8 @@ from src.models.settings import UserSettings
 from src.utils import login_required, get_current_user, create_session, logout_user
 from src.utils.database import check_db_connection
 from src.utils.openai_helper import generate_social_media_post, correct_subtitles
+from src.utils.google_translate import translate_text
+from src.migrations.migrations import run_all_migrations
 
 # Função para formatar timestamps para formato SRT
 def format_timestamp(seconds):
@@ -33,9 +40,6 @@ def format_timestamp(seconds):
     
     return f"{hours:02d}:{minutes:02d}:{seconds:02d},{milliseconds:03d}"
 
-# Importando a migração de configurações
-from src.migrations.user_settings import create_user_settings_table
-
 # Versão do aplicativo
 APP_VERSION = "1.1.5"
 
@@ -46,7 +50,6 @@ load_dotenv()
 UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', '/app/uploads')
 ALLOWED_EXTENSIONS = set(os.environ.get('ALLOWED_EXTENSIONS', 'mp4,mov,avi,mkv').split(','))
 SECRET_KEY = os.environ.get('FLASK_SECRET_KEY', 'sua_chave_secreta')
-GOOGLE_API_KEY = os.environ.get('GOOGLE_TRANSLATE_API_KEY', '')
 
 # Cria e configura a aplicação Flask
 app = Flask(__name__, 
@@ -61,8 +64,8 @@ bootstrap = Bootstrap5(app)
 logger.info(f"Iniciando AutoSub versão {APP_VERSION}")
 logger.info(f"Diretório de uploads configurado em: {UPLOAD_FOLDER}")
 
-# Criar tabelas se não existirem
-create_user_settings_table()
+# Executa todas as migrações necessárias
+run_all_migrations()
 
 # Filtro personalizado para converter quebras de linha em <br>
 @app.template_filter('nl2br')
@@ -81,7 +84,8 @@ def allowed_file(filename):
 @app.route('/')
 def index():
     """Página inicial."""
-    return render_template('index.html')
+    user = get_current_user()
+    return render_template('index.html', user=user)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -217,8 +221,8 @@ def video_detail(video_id):
     en_subtitle = next((s for s in subtitles if s.language == 'en'), None)
     if en_subtitle:
         transcript = en_subtitle.extract_text()
-        social_media_text['instagram'] = generate_social_media_post(transcript, 'instagram')
-        social_media_text['tiktok'] = generate_social_media_post(transcript, 'tiktok')
+        social_media_text['instagram'] = generate_social_media_post(transcript, 'instagram', user['user_id'])
+        social_media_text['tiktok'] = generate_social_media_post(transcript, 'tiktok', user['user_id'])
     
     return render_template('video_detail.html', video=video, subtitles=subtitles, social_media_text=social_media_text)
 
@@ -385,17 +389,20 @@ def process_video(video_id):
         user_settings = UserSettings.get_by_user_id(video.user_id)
         logger.info(f"[INFO] Configurações de usuário recuperadas com sucesso")
         
-        # Obter a chave da API OpenAI
-        openai_api_key = user_settings.openai_api_key
-        logger.info(f"[INFO] Chave API OpenAI: {'Configurada' if openai_api_key else 'Não configurada'}")
+        # Verificar qual serviço de transcrição usar
+        transcription_service = user_settings.transcription_service
+        logger.info(f"[INFO] Serviço de transcrição configurado: {transcription_service}")
         
-        if not openai_api_key:
-            logger.error(f"[ERRO] Chave da API OpenAI não encontrada para o usuário {video.user_id}")
-            video.update_status('error')
-            return
-        
-        logger.info(f"[INFO] === INICIANDO TRANSCRIÇÃO COM WHISPER ===")
-        logger.info(f"[INFO] Idioma original: {video.source_language}, Idioma alvo: {video.target_language}, Número de personagens: {video.num_speakers}")
+        # Obter a chave da API OpenAI se estiver usando o Whisper
+        openai_api_key = None
+        if transcription_service == 'whisper':
+            openai_api_key = user_settings.openai_api_key
+            logger.info(f"[INFO] Chave API OpenAI: {'Configurada' if openai_api_key else 'Não configurada'}")
+            
+            if not openai_api_key:
+                logger.error(f"[ERRO] Chave da API OpenAI não encontrada para o usuário {video.user_id}, mas serviço Whisper foi selecionado")
+                logger.info(f"[INFO] Alterando para serviço AutoSub como fallback")
+                transcription_service = 'autosub'
         
         # Definir caminhos de saída para as legendas
         source_srt_path = f"{base_path}_{video.source_language}.srt"
@@ -404,18 +411,7 @@ def process_video(video_id):
         logger.info(f"[INFO] Arquivo de legendas traduzidas será salvo em: {target_srt_path}")
         
         try:
-            # Importar a biblioteca OpenAI
-            logger.info(f"[INFO] Verificando disponibilidade da biblioteca OpenAI")
-            try:
-                import openai
-                logger.info(f"[INFO] Biblioteca OpenAI importada com sucesso")
-            except ImportError:
-                logger.info(f"[ERRO] Biblioteca OpenAI não encontrada, tentando instalar automaticamente")
-                subprocess.run(['pip', 'install', 'openai'], check=True)
-                import openai
-                logger.info(f"[INFO] Biblioteca OpenAI instalada e importada com sucesso")
-            
-            # Extrair áudio do vídeo (apenas o áudio é necessário para Whisper)
+            # Extrair áudio do vídeo (necessário para ambos os serviços)
             logger.info(f"[INFO] === EXTRAÇÃO DE ÁUDIO ===")
             logger.info(f"[INFO] Iniciando extração de áudio do vídeo: {video_path}")
             audio_path = f"{base_path}.wav"
@@ -442,48 +438,90 @@ def process_video(video_id):
             audio_file_size = os.path.getsize(audio_path) / (1024 * 1024)  # Tamanho em MB
             logger.info(f"[INFO] Tamanho do arquivo de áudio: {audio_file_size:.2f} MB")
             
-            if audio_file_size > 25:
-                logger.warning(f"[AVISO] Arquivo de áudio é muito grande para a API Whisper (> 25MB). Iniciando compressão")
-                compressed_audio_path = f"{base_path}_compressed.mp3"
-                logger.info(f"[INFO] Arquivo comprimido será salvo em: {compressed_audio_path}")
-                compress_cmd = [
-                    'ffmpeg', '-y', '-i', audio_path,
-                    '-codec:a', 'libmp3lame', '-qscale:a', '9',
-                    compressed_audio_path
-                ]
-                logger.info(f"[INFO] Executando compressão com ffmpeg: {' '.join(compress_cmd)}")
-                subprocess.run(compress_cmd, check=True, stderr=subprocess.PIPE)
-                audio_path = compressed_audio_path
-                compressed_size = os.path.getsize(audio_path) / (1024 * 1024)
-                logger.info(f"[INFO] Áudio comprimido com sucesso: {audio_path}, tamanho final: {compressed_size:.2f} MB")
-            
-            # Inicializar cliente OpenAI
-            logger.info(f"[INFO] === TRANSCRIÇÃO COM API WHISPER ===")
-            logger.info(f"[INFO] Configurando cliente OpenAI com chave API")
-            client = openai.OpenAI(api_key=openai_api_key)
-            logger.info(f"[INFO] Cliente OpenAI inicializado com sucesso")
-            
-            # Enviar para a API Whisper
-            logger.info(f"[INFO] Iniciando envio do arquivo de áudio para a API Whisper")
-            logger.info(f"[INFO] Parâmetros: modelo=whisper-1, idioma={video.source_language}")
-            logger.info(f"[INFO] Este processo pode demorar alguns minutos dependendo do tamanho do arquivo")
-            
-            with open(audio_path, 'rb') as audio_file:
-                # Usar a API para transcrição
-                logger.info(f"[INFO] Enviando arquivo para a API Whisper...")
-                transcription = client.audio.transcriptions.create(
-                    model="whisper-1",
-                    file=audio_file,
-                    response_format="srt",
-                    language=video.source_language,
-                    prompt=f"Este áudio possui {video.num_speakers} personagens." if video.num_speakers > 0 else ""
-                )
-                logger.info(f"[INFO] Resposta recebida da API Whisper com sucesso")
+            if transcription_service == 'whisper':
+                # Processar com Whisper API
+                logger.info(f"[INFO] === INICIANDO TRANSCRIÇÃO COM WHISPER ===")
                 
-                # Salvar a transcrição no formato SRT
-                logger.info(f"[INFO] Salvando transcrição no formato SRT")
-                with open(source_srt_path, 'w', encoding='utf-8') as srt_file:
-                    srt_file.write(transcription)
+                if audio_file_size > 25:
+                    logger.warning(f"[AVISO] Arquivo de áudio é muito grande para a API Whisper (> 25MB). Iniciando compressão")
+                    compressed_audio_path = f"{base_path}_compressed.mp3"
+                    logger.info(f"[INFO] Arquivo comprimido será salvo em: {compressed_audio_path}")
+                    compress_cmd = [
+                        'ffmpeg', '-y', '-i', audio_path,
+                        '-codec:a', 'libmp3lame', '-qscale:a', '9',
+                        compressed_audio_path
+                    ]
+                    logger.info(f"[INFO] Executando compressão com ffmpeg: {' '.join(compress_cmd)}")
+                    subprocess.run(compress_cmd, check=True, stderr=subprocess.PIPE)
+                    audio_path = compressed_audio_path
+                    compressed_size = os.path.getsize(audio_path) / (1024 * 1024)
+                    logger.info(f"[INFO] Áudio comprimido com sucesso: {audio_path}, tamanho final: {compressed_size:.2f} MB")
+                
+                # Importar a biblioteca OpenAI
+                logger.info(f"[INFO] Verificando disponibilidade da biblioteca OpenAI")
+                try:
+                    import openai
+                    logger.info(f"[INFO] Biblioteca OpenAI importada com sucesso")
+                except ImportError:
+                    logger.info(f"[ERRO] Biblioteca OpenAI não encontrada, tentando instalar automaticamente")
+                    subprocess.run(['pip', 'install', 'openai'], check=True)
+                    import openai
+                    logger.info(f"[INFO] Biblioteca OpenAI instalada e importada com sucesso")
+                
+                # Inicializar cliente OpenAI
+                logger.info(f"[INFO] === TRANSCRIÇÃO COM API WHISPER ===")
+                logger.info(f"[INFO] Configurando cliente OpenAI com chave API")
+                client = openai.OpenAI(api_key=openai_api_key)
+                logger.info(f"[INFO] Cliente OpenAI inicializado com sucesso")
+                
+                # Enviar para a API Whisper
+                logger.info(f"[INFO] Iniciando envio do arquivo de áudio para a API Whisper")
+                logger.info(f"[INFO] Parâmetros: modelo=whisper-1, idioma={video.source_language}")
+                logger.info(f"[INFO] Este processo pode demorar alguns minutos dependendo do tamanho do arquivo")
+                
+                with open(audio_path, 'rb') as audio_file:
+                    # Usar a API para transcrição
+                    logger.info(f"[INFO] Enviando arquivo para a API Whisper...")
+                    transcription = client.audio.transcriptions.create(
+                        model="whisper-1",
+                        file=audio_file,
+                        response_format="srt",
+                        language=video.source_language,
+                        prompt=f"Este áudio possui {video.num_speakers} personagens." if video.num_speakers > 0 else ""
+                    )
+                    logger.info(f"[INFO] Resposta recebida da API Whisper com sucesso")
+                    
+                    # Salvar a transcrição no formato SRT
+                    logger.info(f"[INFO] Salvando transcrição no formato SRT")
+                    with open(source_srt_path, 'w', encoding='utf-8') as srt_file:
+                        srt_file.write(transcription)
+                    
+                    logger.info(f"[INFO] Legendas em {video.source_language} geradas com sucesso em: {source_srt_path}")
+                    logger.info(f"[INFO] Tamanho do arquivo de legendas: {os.path.getsize(source_srt_path)} bytes")
+            else:
+                # Processar com AutoSub (serviço local)
+                logger.info(f"[INFO] === INICIANDO TRANSCRIÇÃO COM AUTOSUB ===")
+                logger.info(f"[INFO] Parâmetros: idioma={video.source_language}, speakers={video.num_speakers}")
+                
+                # Configurar comando AutoSub para transcrição
+                autosub_cmd = [
+                    'autosub', 
+                    '-i', audio_path, 
+                    '-o', source_srt_path,
+                    '-S', video.source_language,
+                    '-F', 'srt'
+                ]
+                
+                if video.num_speakers > 0:
+                    autosub_cmd.extend(['--speech-regions', 'voice-activity-detection'])
+                
+                logger.info(f"[INFO] Executando comando AutoSub: {' '.join(autosub_cmd)}")
+                subprocess.run(autosub_cmd, check=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+                
+                # Verificar se o arquivo de legendas foi gerado
+                if not os.path.exists(source_srt_path):
+                    logger.error(f"[ERRO] Arquivo de legendas não foi gerado pelo AutoSub: {source_srt_path}")
+                    raise Exception(f"Arquivo de legendas não foi gerado pelo AutoSub: {source_srt_path}")
                 
                 logger.info(f"[INFO] Legendas em {video.source_language} geradas com sucesso em: {source_srt_path}")
                 logger.info(f"[INFO] Tamanho do arquivo de legendas: {os.path.getsize(source_srt_path)} bytes")
@@ -520,16 +558,30 @@ def process_video(video_id):
                     current_block += 1
                     logger.info(f"[INFO] Traduzindo bloco {current_block}/{total_blocks} (ID: {idx})")
                     try:
-                        response = client.chat.completions.create(
-                            model="gpt-3.5-turbo",
-                            messages=[
-                                {"role": "system", "content": f"Traduza o seguinte texto de {video.source_language} para {video.target_language}. Mantenha o mesmo formato e não adicione informações extras."},
-                                {"role": "user", "content": text}
-                            ]
+                        # Usar a API do Google Translate com a chave do usuário
+                        translation_result = translate_text(
+                            text=text,
+                            source_lang=video.source_language,
+                            target_lang=video.target_language,
+                            user_id=video.user_id
                         )
                         
-                        translated_text = response.choices[0].message.content.strip()
-                        logger.info(f"[INFO] Bloco {idx} traduzido com sucesso")
+                        if translation_result["success"]:
+                            translated_text = translation_result["translated_text"]
+                            logger.info(f"[INFO] Bloco {idx} traduzido com sucesso usando Google Translate")
+                        else:
+                            # Fallback para OpenAI em caso de erro com Google Translate
+                            logger.warning(f"[AVISO] Erro na tradução com Google Translate: {translation_result['error']}. Tentando com OpenAI...")
+                            response = client.chat.completions.create(
+                                model="gpt-3.5-turbo",
+                                messages=[
+                                    {"role": "system", "content": f"Traduza o seguinte texto de {video.source_language} para {video.target_language}. Mantenha o mesmo formato e não adicione informações extras."},
+                                    {"role": "user", "content": text}
+                                ]
+                            )
+                            
+                            translated_text = response.choices[0].message.content.strip()
+                            logger.info(f"[INFO] Bloco {idx} traduzido com sucesso usando OpenAI (fallback)")
                         
                         # Adicionar o bloco traduzido
                         translated_parts.append((idx, time_code, translated_text))
@@ -631,7 +683,7 @@ def correct_video_subtitles(video_id):
     en_content = en_subtitle.get_content()
     
     # Primeiro, corrigir a legenda em inglês usando a transcrição manual
-    corrected_en = correct_subtitles(en_content, video.description)
+    corrected_en = correct_subtitles(en_content, video.description, user['user_id'])
     
     # Atualizar o arquivo SRT em inglês
     en_updated = False
@@ -648,7 +700,7 @@ def correct_video_subtitles(video_id):
         pt_content = pt_subtitle.get_content()
         
         # Usar a legenda em inglês corrigida como referência para a legenda em português
-        corrected_pt = correct_subtitles(pt_content, corrected_en)
+        corrected_pt = correct_subtitles(pt_content, corrected_en, user['user_id'])
         
         if corrected_pt and not corrected_pt.startswith('Erro'):
             pt_subtitle.update_content(corrected_pt)
@@ -686,8 +738,8 @@ def generate_social_media_content(video_id):
     if video.description and video.description.strip():
         transcript = video.description
     
-    # Gerar texto para rede social
-    social_text = generate_social_media_post(transcript, platform)
+    # Gerar texto para rede social, passando o ID do usuário
+    social_text = generate_social_media_post(transcript, platform, user['user_id'])
     
     return jsonify({
         'platform': platform,
@@ -857,7 +909,7 @@ def admin_delete_user(user_id):
 @app.route('/video/<int:video_id>/update-description', methods=['POST'])
 @login_required
 def update_video_description(video_id):
-    """Atualiza a descrição (transcrição manual) de um vídeo."""
+    """Atualiza a descrição do vídeo com a transcrição manual."""
     user = get_current_user()
     video = Video.get_by_id(video_id)
     
@@ -866,12 +918,14 @@ def update_video_description(video_id):
         return redirect(url_for('dashboard'))
     
     description = request.form.get('description', '').strip()
+    if not description:
+        flash('A transcrição não pode estar vazia.', 'error')
+        return redirect(url_for('video_detail', video_id=video.id))
     
-    if video.update_details(description=description):
-        flash('Transcrição manual salva com sucesso! Agora você pode usar a função de correção de legendas.', 'success')
-    else:
-        flash('Erro ao salvar a transcrição manual. Tente novamente.', 'error')
+    # Atualizar a descrição do vídeo
+    video.update_details(description=description)
     
+    flash('Transcrição salva com sucesso! Agora você pode usá-la para corrigir as legendas.', 'success')
     return redirect(url_for('video_detail', video_id=video.id))
 
 @app.route('/settings')
@@ -881,39 +935,64 @@ def settings():
     user = get_current_user()
     user_settings = UserSettings.get_by_user_id(user['user_id'])
     
-    return render_template('settings/index.html', 
+    return render_template('settings/general.html', 
                           user_settings=user_settings,
                           active_tab='general')
 
 @app.route('/settings/update', methods=['POST'])
 @login_required
 def settings_update():
-    """Atualiza as configurações do usuário."""
+    """Atualiza as configurações gerais do usuário."""
     user = get_current_user()
     user_settings = UserSettings.get_by_user_id(user['user_id'])
     
-    #transcription_service = request.form.get('transcription_service')
-    transcription_service = 'whisper'
-    
-    openai_api_key = request.form.get('openai_api_key')
+    transcription_service = request.form.get('transcription_service')
     
     # Validar a opção de serviço
     if transcription_service not in ['autosub', 'whisper']:
         transcription_service = 'whisper'
     
-    # Se escolheu whisper, verificar se tem a API key
-    if transcription_service == 'whisper' and (not openai_api_key or openai_api_key.strip() == ''):
-        flash('Para usar o Whisper, você precisa fornecer uma chave da API OpenAI.', 'error')
-        return redirect(url_for('settings'))
-    
     # Atualizar as configurações
     user_settings.update(
-        transcription_service=transcription_service,
-        openai_api_key=openai_api_key
+        transcription_service=transcription_service
     )
     
     flash('Configurações atualizadas com sucesso!', 'success')
     return redirect(url_for('settings'))
+
+@app.route('/settings/api')
+@login_required
+def settings_api():
+    """Página de configurações de API."""
+    user = get_current_user()
+    user_settings = UserSettings.get_by_user_id(user['user_id'])
+    
+    return render_template('settings/api.html', 
+                          user_settings=user_settings,
+                          active_tab='api')
+
+@app.route('/settings/update/api', methods=['POST'])
+@login_required
+def settings_update_api():
+    """Atualiza as configurações de API do usuário."""
+    user = get_current_user()
+    user_settings = UserSettings.get_by_user_id(user['user_id'])
+    
+    openai_api_key = request.form.get('openai_api_key')
+    google_translate_api_key = request.form.get('google_translate_api_key')
+    
+    # Se escolheu whisper, verificar se tem a API key
+    if user_settings.transcription_service == 'whisper' and (not openai_api_key or openai_api_key.strip() == ''):
+        flash('Para usar o Whisper, você precisa fornecer uma chave da API OpenAI.', 'warning')
+    
+    # Atualizar as configurações
+    user_settings.update(
+        openai_api_key=openai_api_key,
+        google_translate_api_key=google_translate_api_key
+    )
+    
+    flash('Configurações de API atualizadas com sucesso!', 'success')
+    return redirect(url_for('settings_api'))
 
 @app.route('/settings/prompts')
 @login_required
@@ -926,6 +1005,31 @@ def settings_prompts():
                           user_settings=user_settings,
                           active_tab='prompts')
 
+@app.route('/settings/update/prompts', methods=['POST'])
+@login_required
+def settings_update_prompts():
+    """Atualiza as configurações de prompts do usuário."""
+    user = get_current_user()
+    user_settings = UserSettings.get_by_user_id(user['user_id'])
+    
+    # Identificar qual tipo de prompt está sendo atualizado
+    prompt_type = request.form.get('prompt_type', '')
+    
+    if prompt_type == 'instagram':
+        instagram_prompt = request.form.get('instagram_prompt')
+        # Atualizar apenas o prompt do Instagram
+        user_settings.update(instagram_prompt=instagram_prompt)
+        flash('Prompt para Instagram atualizado com sucesso!', 'success')
+    elif prompt_type == 'tiktok':
+        tiktok_prompt = request.form.get('tiktok_prompt')
+        # Atualizar apenas o prompt do TikTok
+        user_settings.update(tiktok_prompt=tiktok_prompt)
+        flash('Prompt para TikTok atualizado com sucesso!', 'success')
+    else:
+        flash('Tipo de prompt não reconhecido.', 'error')
+    
+    return redirect(url_for('settings_prompts'))
+
 @app.route('/settings/models')
 @login_required
 def settings_models():
@@ -936,6 +1040,28 @@ def settings_models():
     return render_template('settings/models.html', 
                           user_settings=user_settings,
                           active_tab='models')
+
+@app.route('/settings/update/models', methods=['POST'])
+@login_required
+def settings_update_models():
+    """Atualiza as configurações de modelos do usuário."""
+    user = get_current_user()
+    user_settings = UserSettings.get_by_user_id(user['user_id'])
+    
+    openai_model = request.form.get('openai_model')
+    
+    # Validar a opção de modelo
+    valid_models = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4o', 'gpt-4o-mini']
+    if openai_model not in valid_models:
+        openai_model = 'gpt-4o-mini'
+    
+    # Atualizar as configurações
+    user_settings.update(
+        openai_model=openai_model
+    )
+    
+    flash('Configurações de modelos atualizadas com sucesso!', 'success')
+    return redirect(url_for('settings_models'))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

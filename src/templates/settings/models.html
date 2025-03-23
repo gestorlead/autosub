@@ -13,6 +13,9 @@
                 <a href="{{ url_for('settings') }}" class="list-group-item list-group-item-action {% if active_tab == 'general' %}active{% endif %}">
                     <i class="fas fa-sliders-h me-2"></i>Geral
                 </a>
+                <a href="{{ url_for('settings_api') }}" class="list-group-item list-group-item-action {% if active_tab == 'api' %}active{% endif %}">
+                    <i class="fas fa-key me-2"></i>API
+                </a>
                 <a href="{{ url_for('settings_prompts') }}" class="list-group-item list-group-item-action {% if active_tab == 'prompts' %}active{% endif %}">
                     <i class="fas fa-comment-dots me-2"></i>Prompts
                 </a>
@@ -29,10 +32,27 @@
                 <i class="fas fa-microchip me-2"></i>Configurações de Modelos
             </div>
             <div class="card-body">
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Esta funcionalidade será implementada em breve. Aqui você poderá configurar os modelos de IA para geração de legendas.
-                </div>
+                <form method="post" action="{{ url_for('settings_update_models') }}">
+                    <div class="mb-3">
+                        <label for="openai_model" class="form-label">Modelo da OpenAI</label>
+                        <select class="form-select" id="openai_model" name="openai_model">
+                            <option value="gpt-4o-mini" {% if user_settings.openai_model == 'gpt-4o-mini' %}selected{% endif %}>GPT-4o Mini (Padrão)</option>
+                            <option value="gpt-3.5-turbo" {% if user_settings.openai_model == 'gpt-3.5-turbo' %}selected{% endif %}>GPT-3.5 Turbo</option>
+                            <option value="gpt-4" {% if user_settings.openai_model == 'gpt-4' %}selected{% endif %}>GPT-4</option>
+                            <option value="gpt-4o" {% if user_settings.openai_model == 'gpt-4o' %}selected{% endif %}>GPT-4o</option>
+                        </select>
+                        <div class="form-text">
+                            Escolha o modelo da OpenAI a ser utilizado para geração e tradução de legendas.
+                            <br>Modelos mais avançados (GPT-4, GPT-4o) podem oferecer resultados melhores, mas são mais caros.
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Salvar Configurações
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

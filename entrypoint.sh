@@ -3,18 +3,38 @@ set -e
 
 echo "🚀 Iniciando o AutoSub..."
 
-# Usando as variáveis de ambiente definidas no docker-compose ou .env
-# Não precisamos definir PGPASSWORD aqui, pois deve vir do ambiente
+# Verificar se as variáveis de ambiente estão configuradas
+if [ -z "$DB_HOST" ] || [ -z "$DB_PORT" ] || [ -z "$DB_USER" ] || [ -z "$DB_PASSWORD" ] || [ -z "$DB_NAME" ]; then
+  echo "❌ Erro: Variáveis de ambiente do banco de dados não configuradas corretamente."
+  echo "Por favor, configure as variáveis DB_HOST, DB_PORT, DB_USER, DB_PASSWORD e DB_NAME."
+  exit 1
+fi
+
+# Exibir as variáveis de ambiente usadas (sem mostrar a senha)
+echo "Variáveis de ambiente do banco de dados:"
+echo "DB_HOST=${DB_HOST}"
+echo "DB_PORT=${DB_PORT}"
+echo "DB_NAME=${DB_NAME}"
+echo "DB_USER=${DB_USER}"
 
 # Função para verificar se o banco de dados está acessível
 function check_database() {
   echo "⏳ Aguardando conexão com o banco de dados..."
   
-  # Tenta conectar ao banco de dados, com tempo limite de 60 segundos
   for i in {1..30}; do
-    if pg_isready -h ${DB_HOST:-db} -U ${POSTGRES_USER:-postgres}; then
-      echo "✅ Conexão com o banco de dados estabelecida!"
-      return 0
+    if pg_isready -h "${DB_HOST}" -p "${DB_PORT}" -U "${DB_USER}"; then
+      echo "✅ Conexão com o servidor PostgreSQL estabelecida!"
+      
+      # Verificar se o banco de dados existe
+      if PGPASSWORD="${DB_PASSWORD}" psql -h "${DB_HOST}" -p "${DB_PORT}" -U "${DB_USER}" -lqt | cut -d \| -f 1 | grep -qw "${DB_NAME}"; then
+        echo "✅ Banco de dados '${DB_NAME}' existe e está acessível."
+        return 0
+      else
+        echo "❌ Erro: O banco de dados '${DB_NAME}' não existe."
+        echo "Por favor, crie o banco de dados manualmente usando o comando:"
+        echo "CREATE DATABASE ${DB_NAME};"
+        return 1
+      fi
     fi
     echo "⏳ Tentativa $i/30. Tentando novamente em 2 segundos..."
     sleep 2
@@ -24,28 +44,14 @@ function check_database() {
   return 1
 }
 
-# Função para criar o banco de dados se não existir
-function setup_database() {
-  echo "🔧 Verificando se o banco de dados '${DB_NAME:-autosub}' existe..."
-  
-  # Usando variáveis de ambiente
-  if ! PGPASSWORD="${POSTGRES_PASSWORD}" psql -h ${DB_HOST:-db} -U ${POSTGRES_USER:-postgres} -lqt | cut -d \| -f 1 | grep -qw ${DB_NAME:-autosub}; then
-    echo "📦 Criando banco de dados '${DB_NAME:-autosub}'..."
-    PGPASSWORD="${POSTGRES_PASSWORD}" psql -h ${DB_HOST:-db} -U ${POSTGRES_USER:-postgres} -c "CREATE DATABASE ${DB_NAME:-autosub};"
-    echo "✅ Banco de dados '${DB_NAME:-autosub}' criado com sucesso!"
-  else
-    echo "✅ Banco de dados '${DB_NAME:-autosub}' já existe!"
-  fi
-}
-
 # Verifica se o banco de dados está acessível
-check_database
+if ! check_database; then
+  echo "❌ Erro de conexão com o banco de dados. Verifique as configurações e garanta que o banco '${DB_NAME}' exista."
+  exit 1
+fi
 
-# Setup do banco de dados
-setup_database
-
-# Executando migrações
-echo "🔄 Executando migrações do banco de dados..."
+# Executando migrações do banco de dados via Python
+echo "🔄 Verificando e atualizando tabelas do banco de dados..."
 python -m src.migrations.migrations
 
 # Iniciando a aplicação

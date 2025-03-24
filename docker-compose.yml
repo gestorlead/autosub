@@ -11,14 +11,13 @@ services:
       - ./uploads:/app/uploads
       - ./src:/app/src
       - ./app.py:/app/app.py
+      - ./entrypoint.sh:/entrypoint.sh
     environment:
       - DB_HOST=db
       - DB_PORT=5432
       - DB_NAME=autosub
       - DB_USER=postgres
       - DB_PASSWORD=postgres
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
       - ADMIN_USERNAME=admin
       - ADMIN_PASSWORD=admin123
       - ADMIN_EMAIL=admin@example.com
@@ -41,6 +40,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    command: ["postgres", "-c", "fsync=off", "-c", "full_page_writes=off"]
 
 volumes:
   postgres_data:

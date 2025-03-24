@@ -41,7 +41,7 @@ def format_timestamp(seconds):
     return f"{hours:02d}:{minutes:02d}:{seconds:02d},{milliseconds:03d}"
 
 # Versão do aplicativo
-APP_VERSION = "1.1.5"
+APP_VERSION = "1.1.6"
 
 # Carrega as variáveis definidas no .env
 load_dotenv()

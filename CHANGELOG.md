@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.1.6] - 2025-03-24
+
+### Corrigido
+
+- Problema de reinicialização do banco de dados ao reiniciar a aplicação
+- Persistência de dados no PostgreSQL usando volume Docker corretamente configurado
+- Remoção de logs de depuração excessivos para manter os logs mais limpos
+- Verificação aprimorada da existência de tabelas para evitar recriação desnecessária
+
 ## [1.1.5] - 2025-06-10
 
 ### Adicionado
